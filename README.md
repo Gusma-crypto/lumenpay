@@ -4,12 +4,9 @@ LumenPay is a payroll and recurring payment streaming concept built around Stell
 
 This repository currently implements **LumenPay Lite**, the Level 1 Stellar Testnet foundation: Freighter wallet connection, XLM balance display, XLM testnet payments, transaction feedback, network guard, QR recipient scanning, and a frontend-only template for the future USDC streaming product.
 
-## Submission Scope
-
-This submission focuses on the **Level 1 Stellar Testnet requirements** only.
+## Submission
 
 Implemented in this repository:
-
 * Freighter wallet connection
 * Stellar Testnet account balance display
 * Native XLM testnet payment transaction
