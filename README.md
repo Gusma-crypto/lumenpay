@@ -4,6 +4,27 @@ LumenPay is a payroll and recurring payment streaming concept built around Stell
 
 This repository currently implements **LumenPay Lite**, the Level 1 Stellar Testnet foundation: Freighter wallet connection, XLM balance display, XLM testnet payments, transaction feedback, network guard, QR recipient scanning, and a frontend-only template for the future USDC streaming product.
 
+## Submission Scope
+
+This submission focuses on the **Level 1 Stellar Testnet requirements** only.
+
+Implemented in this repository:
+
+* Freighter wallet connection
+* Stellar Testnet account balance display
+* Native XLM testnet payment transaction
+* Transaction result shown to the user
+* Transaction hash and Stellar Expert testnet explorer link
+
+Not included in this Level 1 submission:
+
+* Soroban smart contract deployment
+* USDC escrow
+* Real-time USDC payment streaming
+* On-chain stream withdrawal and cancellation logic
+
+The Soroban and USDC streaming features are part of the future product vision, not the implemented Level 1 scope.
+
 ## Problem
 
 Traditional payroll and recurring payment systems are slow, inefficient, and heavily dependent on manual processes. Employees often wait until payday to access wages they have already earned, while freelancers must wait for invoice approvals before receiving payment.
@@ -12,7 +33,7 @@ For businesses, recurring payments require repeated manual transfers, increase o
 
 There is a need for a modern payment infrastructure that enables real-time, transparent, and programmable money movement.
 
-## Solution
+## Product Vision
 
 LumenPay transforms payroll and recurring payments into continuous financial streams powered by Stellar and Soroban smart contracts.
 
@@ -22,7 +43,7 @@ Employees, freelancers, contractors, and contributors can withdraw earned funds 
 
 If a payment stream is cancelled, earned funds remain claimable by the recipient while unearned funds are automatically returned to the payer.
 
-## Implemented in LumenPay Lite
+## Implemented Level 1 Features
 
 * Connect Freighter wallet
 * Disconnect wallet locally from the app
@@ -40,7 +61,7 @@ If a payment stream is cancelled, earned funds remain claimable by the recipient
 * Show transaction hash and Stellar Expert testnet explorer link
 * Display a frontend-only LumenPay Streams template aligned with the full product idea
 
-## Key Features in the Full Product Vision
+## Future Product Features
 
 * Real-time USDC payment streaming
 * Smart contract escrow protection
@@ -192,36 +213,71 @@ If the connected account is not active on Testnet yet, use the Friendbot link sh
 
 ## Screenshots
 
-Add screenshots before submission:
+Add the final demo screenshots in `public/screenshots/` before submission.
 
-```txt
-public/screenshots/wallet-connected.png
-public/screenshots/balance-displayed.png
-public/screenshots/transaction-success.png
-public/screenshots/stream-template.png
-```
+### Wallet Connected State
 
-Suggested README image section after screenshots are added:
+![Wallet connected state](public/screenshots/wallet-connected.png)
 
-```md
-![Wallet connected](public/screenshots/wallet-connected.png)
+Required proof:
+
+* Freighter wallet is connected
+* Connected Stellar public key is visible
+* App is using Stellar Testnet
+
+### Balance Displayed
+
 ![Balance displayed](public/screenshots/balance-displayed.png)
-![Transaction success](public/screenshots/transaction-success.png)
-![Stream template](public/screenshots/stream-template.png)
-```
+
+Required proof:
+
+* Connected wallet balance is visible
+* Balance is fetched from Stellar Testnet
+
+### Successful Testnet Transaction
+
+![Successful testnet transaction](public/screenshots/transaction-success.png)
+
+Required proof:
+
+* Payment was submitted successfully
+* Transaction hash is visible
+* Stellar Expert testnet link is visible
+
+### Transaction Result Shown to the User
+
+![Transaction result shown to the user](public/screenshots/transaction-result.png)
+
+Required proof:
+
+* The UI clearly shows the final transaction result after signing
+* Success or failure feedback is visible to the user
 
 ## Submission Checklist
 
-* Public GitHub repository
-* README.md included
-* Setup instructions included
-* Wallet connected screenshot
-* Balance displayed screenshot
-* Successful testnet transaction screenshot
-* Transaction hash shown in the UI
-* Deployed application URL
-* Freighter switched to Stellar Testnet before recording the demo
+Use this checklist before submitting the GitHub repository link.
+
+- [ ] Public GitHub repository
+- [x] `README.md` file included
+- [x] Project description included
+- [x] Setup instructions included
+- [ ] Screenshot: wallet connected state
+- [ ] Screenshot: balance displayed
+- [ ] Screenshot: successful Stellar testnet transaction
+- [ ] Screenshot: transaction result shown to the user
+- [x] UI shows transaction hash after successful submission
+- [x] UI provides Stellar Expert testnet explorer link
+- [ ] Freighter is switched to Stellar Testnet before recording screenshots
+- [ ] Final GitHub repository link submitted before the monthly deadline
+
+Repository link:
+
+```txt
+https://github.com/YOUR_USERNAME/lumenpay-stellar
+```
 
 ## Future Scope
 
-The full LumenPay idea will later expand into USDC payment streaming with Soroban smart contract escrow, time-based accrual, stream cancellation, and refund handling. The app includes a frontend-only stream template to show this direction, but Soroban contracts, USDC escrow, withdrawals, and refunds are intentionally outside the Level 1 implementation scope.
+The full LumenPay idea will later expand into USDC payment streaming with Soroban smart contract escrow, time-based accrual, stream cancellation, and refund handling.
+
+The app includes a frontend-only stream template to show this direction, but Soroban contracts, USDC escrow, withdrawals, and refunds are intentionally outside the Level 1 implementation scope.

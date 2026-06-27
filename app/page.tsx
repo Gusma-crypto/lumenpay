@@ -288,8 +288,15 @@ export default function Home() {
     <main className="app-shell" data-theme={theme}>
       <AppHeader theme={theme} onToggleTheme={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))} />
 
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-6 md:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:py-8">
-        <div className="space-y-6">
+      <section className="mx-auto grid w-full max-w-[1380px] gap-5 px-4 py-5 md:px-6 lg:grid-cols-2 xl:grid-cols-3 xl:items-start">
+        <div className="space-y-5">
+          <div className="rounded-lg border border-line/50 bg-[#101124]/80 p-4 shadow-panel">
+            <p className="section-eyebrow">Step 1</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Connect and check balance</h2>
+            <p className="mt-2 text-sm leading-6 text-violet-100/70">
+              Start with Freighter on Stellar Testnet, then confirm your available XLM.
+            </p>
+          </div>
           <WalletPanel
             publicKey={publicKey}
             status={walletStatus}
@@ -312,7 +319,14 @@ export default function Home() {
           <AddressBook items={paymentHistory} publicKey={publicKey} onSelect={setRecipientSuggestion} />
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
+          <div className="rounded-lg border border-line/50 bg-[#101124]/80 p-4 shadow-panel">
+            <p className="section-eyebrow">Step 2</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Send a Testnet payment</h2>
+            <p className="mt-2 text-sm leading-6 text-violet-100/70">
+              Enter a recipient, amount, optional memo, then review before signing.
+            </p>
+          </div>
           <PaymentForm
             isConnected={isConnected}
             isSubmitting={isSubmitting}
@@ -345,17 +359,24 @@ export default function Home() {
             </section>
           ) : null}
         </div>
-      </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-5 pb-8 md:px-8 lg:grid-cols-[0.92fr_1.08fr]" id="history">
-        <PaymentActivityChart items={paymentHistory} isConnected={isConnected} />
-        <TransactionHistory
-          items={paymentHistory}
-          isLoading={isHistoryLoading}
-          error={historyError}
-          isConnected={isConnected}
-          onRefresh={refreshPaymentHistory}
-        />
+        <div className="space-y-5 lg:col-span-2 xl:col-span-1">
+          <div className="rounded-lg border border-line/50 bg-[#101124]/80 p-4 shadow-panel">
+            <p className="section-eyebrow">Step 3</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Track activity</h2>
+            <p className="mt-2 text-sm leading-6 text-violet-100/70">
+              View payment totals, filter recent transactions, and open hashes in Stellar Expert.
+            </p>
+          </div>
+          <PaymentActivityChart items={paymentHistory} isConnected={isConnected} />
+          <TransactionHistory
+            items={paymentHistory}
+            isLoading={isHistoryLoading}
+            error={historyError}
+            isConnected={isConnected}
+            onRefresh={refreshPaymentHistory}
+          />
+        </div>
       </section>
 
       {pendingPayment ? (

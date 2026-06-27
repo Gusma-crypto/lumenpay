@@ -32,7 +32,7 @@ export function WalletPanel(props: WalletPanelProps) {
           <p className="section-eyebrow">Wallet</p>
           <h2 className="text-xl font-semibold text-ink">Freighter Connection</h2>
           <p className="mt-2 max-w-md text-sm leading-6 text-violet-100/70">
-            Connect your Stellar wallet to access payment features and future payroll streaming capabilities.
+            Connect Freighter, confirm Testnet, then use this wallet to send XLM.
           </p>
         </div>
         <div className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-cyan-400/10 text-cyan-300 shadow-sm">
@@ -50,8 +50,8 @@ export function WalletPanel(props: WalletPanelProps) {
           <p className="mt-1 text-sm font-semibold text-cyan-100">{props.isTestnet ? "Testnet ready" : "Needs Testnet"}</p>
         </div>
         <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
-          <p className="text-xs font-semibold uppercase text-violet-200/55">Connected Asset Support</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-100">XLM now, USDC next</p>
+          <p className="text-xs font-semibold uppercase text-violet-200/55">Payment Asset</p>
+          <p className="mt-1 text-sm font-semibold text-cyan-100">Native XLM</p>
         </div>
       </div>
 

@@ -8,7 +8,7 @@ type AppHeaderProps = {
 export function AppHeader(props: AppHeaderProps) {
   return (
     <header className="border-b border-line/40 bg-[#080913]/80 px-5 py-5 backdrop-blur md:px-8">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-lg border border-line/50 bg-gradient-to-br from-cyan-400 to-violet-500 text-[#070812] shadow-panel">
             <BadgeDollarSign size={25} aria-hidden="true" />
