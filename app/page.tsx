@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CheckCircle2, ClipboardCheck, X } from "lucide-react";
 import { AddressBook } from "@/components/AddressBook";
 import { AppHeader } from "@/components/AppHeader";
 import { BalanceCard } from "@/components/BalanceCard";
@@ -46,6 +47,40 @@ type PendingPayment = {
   recipient: string;
 };
 
+type AppNotification = {
+  id: number;
+  type: "form" | "success";
+  title: string;
+  message: string;
+};
+
+function NotificationPopup(props: { notification: AppNotification; onClose: () => void }) {
+  const Icon = props.notification.type === "success" ? CheckCircle2 : ClipboardCheck;
+
+  return (
+    <div className="fixed right-4 top-4 z-[60] w-[calc(100vw-2rem)] max-w-sm animate-fade-in rounded-lg border border-cyan-300/45 bg-[#101124]/95 p-4 shadow-panel ring-1 ring-cyan-300/15 backdrop-blur">
+      <div className="flex items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-cyan-400/15 text-cyan-300">
+          <Icon size={20} aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-ink">{props.notification.title}</p>
+          <p className="mt-1 text-sm leading-6 text-violet-100/75">{props.notification.message}</p>
+        </div>
+        <button
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line/50 bg-[#0d0e1f] text-cyan-200 transition hover:border-cyan-300 hover:bg-[#151633]"
+          type="button"
+          onClick={props.onClose}
+          aria-label="Close notification"
+          title="Close notification"
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -64,10 +99,29 @@ export default function Home() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [recipientSuggestion, setRecipientSuggestion] = useState<string | null>(null);
+  const [notification, setNotification] = useState<AppNotification | null>(null);
 
   const isConnected = walletStatus === "connected" && Boolean(publicKey);
   const isSubmitting = transactionResult.status === "signing" || transactionResult.status === "submitting";
   const isFreighterTestnet = freighterNetworkPassphrase === NETWORK_PASSPHRASE;
+
+  function showNotification(type: AppNotification["type"], title: string, message: string) {
+    setNotification({
+      id: Date.now(),
+      type,
+      title,
+      message
+    });
+  }
+
+  useEffect(() => {
+    if (!notification) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setNotification(null), 4200);
+    return () => window.clearTimeout(timeout);
+  }, [notification]);
 
   const refreshBalance = useCallback(async () => {
     if (!publicKey) {
@@ -225,6 +279,7 @@ export default function Home() {
     }
 
     setPendingPayment({ recipient: destinationPublicKey.trim(), amount: amount.trim(), memo: memo.trim() });
+    showNotification("form", "Form Pembayaran Siap", "Detail pembayaran sudah valid. Review transaksi sebelum menandatangani.");
   }
 
   async function sendPayment(destinationPublicKey: string, amount: string, memo: string) {
@@ -273,6 +328,7 @@ export default function Home() {
         hash: response.hash,
         recipient: destinationPublicKey
       });
+      showNotification("success", "Transaction Successful", "Payment berhasil dikirim ke Stellar Testnet.");
 
       await refreshBalance();
       await refreshPaymentHistory();
@@ -286,6 +342,8 @@ export default function Home() {
 
   return (
     <main className="app-shell" data-theme={theme}>
+      {notification ? <NotificationPopup notification={notification} onClose={() => setNotification(null)} /> : null}
+
       <AppHeader
         theme={theme}
         publicKey={publicKey}
@@ -337,6 +395,7 @@ export default function Home() {
           <PaymentForm
             isConnected={isConnected}
             isSubmitting={isSubmitting}
+            latestTransactionHash={recentTransaction?.hash ?? null}
             onSendPayment={reviewPayment}
             onEdit={() => setTransactionResult({ status: "idle" })}
             recipientSuggestion={recipientSuggestion}
@@ -348,10 +407,10 @@ export default function Home() {
               <p className="section-eyebrow">Latest Payment</p>
               <h2 className="mt-1 text-xl font-semibold text-ink">{recentTransaction.amount} XLM Sent</h2>
               <div className="mt-4 space-y-2 text-sm">
-                <p className="rounded-lg border border-line/55 bg-paper p-3 font-mono text-cyan-100">
+                <p className="rounded-lg border border-line/55 bg-paper p-3 font-mono text-cyan-100 [overflow-wrap:anywhere]">
                   {recentTransaction.recipient}
                 </p>
-                <p className="rounded-lg border border-line/55 bg-paper p-3 break-all font-mono text-violet-100/80">
+                <p className="rounded-lg border border-line/55 bg-paper p-3 font-mono text-violet-100/80 [overflow-wrap:anywhere]">
                   {recentTransaction.hash}
                 </p>
                 <a

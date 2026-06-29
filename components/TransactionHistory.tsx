@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, ExternalLink, RefreshCw, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Search } from "lucide-react";
 import { getTestnetExplorerUrl, shortenPublicKey } from "@/lib/explorer";
 import type { PaymentHistoryItem } from "@/lib/stellar";
+
+const HISTORY_PAGE_SIZE = 5;
 
 type TransactionHistoryProps = {
   items: PaymentHistoryItem[];
@@ -24,6 +26,7 @@ function formatDate(value: string) {
 
 export function TransactionHistory(props: TransactionHistoryProps) {
   const [query, setQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(HISTORY_PAGE_SIZE);
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -37,6 +40,13 @@ export function TransactionHistory(props: TransactionHistoryProps) {
         .toLowerCase()
         .includes(normalizedQuery)
     );
+  }, [props.items, query]);
+  const visibleItems = filteredItems.slice(0, visibleCount);
+  const hasMoreItems = visibleCount < filteredItems.length;
+  const canCollapseItems = visibleCount > HISTORY_PAGE_SIZE && filteredItems.length > HISTORY_PAGE_SIZE;
+
+  useEffect(() => {
+    setVisibleCount(HISTORY_PAGE_SIZE);
   }, [props.items, query]);
 
   return (
@@ -107,7 +117,7 @@ export function TransactionHistory(props: TransactionHistoryProps) {
 
       {!props.error && !props.isLoading && filteredItems.length > 0 ? (
         <div className="space-y-3">
-          {filteredItems.map((item) => {
+          {visibleItems.map((item) => {
             const isSent = item.direction === "sent";
             const Icon = isSent ? ArrowUpRight : ArrowDownLeft;
             const counterparty = isSent ? item.to : item.from;
@@ -149,6 +159,30 @@ export function TransactionHistory(props: TransactionHistoryProps) {
               </div>
             );
           })}
+          {hasMoreItems || canCollapseItems ? (
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row">
+              {hasMoreItems ? (
+                <button
+                  className="button-secondary flex-1 justify-center"
+                  type="button"
+                  onClick={() => setVisibleCount((currentCount) => currentCount + HISTORY_PAGE_SIZE)}
+                >
+                  <ChevronDown size={17} aria-hidden="true" />
+                  Tampilkan selanjutnya
+                </button>
+              ) : null}
+              {canCollapseItems ? (
+                <button
+                  className="button-secondary flex-1 justify-center"
+                  type="button"
+                  onClick={() => setVisibleCount(HISTORY_PAGE_SIZE)}
+                >
+                  <ChevronUp size={17} aria-hidden="true" />
+                  Collapse
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

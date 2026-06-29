@@ -2,10 +2,12 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ArrowRight, BadgeDollarSign, MessageSquareText, QrCode, Send, UserRound, X } from "lucide-react";
+import { getTestnetExplorerUrl } from "@/lib/explorer";
 
 type PaymentFormProps = {
   isConnected: boolean;
   isSubmitting: boolean;
+  latestTransactionHash: string | null;
   onSendPayment: (destinationPublicKey: string, amount: string, memo: string) => Promise<void>;
   onEdit: () => void;
   recipientSuggestion: string | null;
@@ -164,9 +166,22 @@ export function PaymentForm(props: PaymentFormProps) {
           <p className="section-eyebrow">Payment</p>
           <h2 className="text-xl font-semibold text-ink">Send XLM Testnet</h2>
         </div>
-        <div className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-violet-400/10 text-amber">
-          <Send size={21} aria-hidden="true" />
-        </div>
+        {props.latestTransactionHash ? (
+          <a
+            className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-violet-400/10 text-amber transition hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-[#151633] hover:text-cyan-200"
+            href={getTestnetExplorerUrl(props.latestTransactionHash)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open latest payment transaction"
+            title="Open latest payment transaction"
+          >
+            <Send size={21} aria-hidden="true" />
+          </a>
+        ) : (
+          <div className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-violet-400/10 text-amber">
+            <Send size={21} aria-hidden="true" />
+          </div>
+        )}
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
