@@ -286,7 +286,14 @@ export default function Home() {
 
   return (
     <main className="app-shell" data-theme={theme}>
-      <AppHeader theme={theme} onToggleTheme={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))} />
+      <AppHeader
+        theme={theme}
+        publicKey={publicKey}
+        walletStatus={walletStatus}
+        onConnect={connectWallet}
+        onDisconnect={disconnectWallet}
+        onToggleTheme={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))}
+      />
 
       <section className="mx-auto grid w-full max-w-[1380px] gap-5 px-4 py-5 md:px-6 lg:grid-cols-2 xl:grid-cols-3 xl:items-start">
         <div className="space-y-5">

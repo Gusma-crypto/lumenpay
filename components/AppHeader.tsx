@@ -1,11 +1,19 @@
-import { BadgeDollarSign, Moon, ShieldCheck, Sparkles, Sun } from "lucide-react";
+import { BadgeDollarSign, LogOut, Moon, Plug, ShieldCheck, Sparkles, Sun } from "lucide-react";
+import { shortenPublicKey } from "@/lib/explorer";
 
 type AppHeaderProps = {
   theme: "dark" | "light";
+  publicKey: string | null;
+  walletStatus: "disconnected" | "connecting" | "connected" | "error";
   onToggleTheme: () => void;
+  onConnect: () => void;
+  onDisconnect: () => void;
 };
 
 export function AppHeader(props: AppHeaderProps) {
+  const isConnected = props.walletStatus === "connected" && Boolean(props.publicKey);
+  const isConnecting = props.walletStatus === "connecting";
+
   return (
     <header className="border-b border-line/40 bg-[#080913]/80 px-5 py-5 backdrop-blur md:px-8">
       <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -28,6 +36,27 @@ export function AppHeader(props: AppHeaderProps) {
             <Sparkles size={17} aria-hidden="true" className="text-amber" />
             Testnet payments
           </div>
+          {isConnected && props.publicKey ? (
+            <button
+              className="button-secondary min-w-0 justify-center"
+              type="button"
+              onClick={props.onDisconnect}
+              title="Disconnect wallet"
+            >
+              <LogOut size={17} aria-hidden="true" />
+              <span className="font-mono">{shortenPublicKey(props.publicKey)}</span>
+            </button>
+          ) : (
+            <button
+              className="button-primary justify-center"
+              type="button"
+              onClick={props.onConnect}
+              disabled={isConnecting}
+            >
+              <Plug size={17} aria-hidden="true" />
+              {isConnecting ? "Connecting" : "Connect"}
+            </button>
+          )}
           <button className="icon-button" type="button" onClick={props.onToggleTheme} aria-label="Toggle theme" title="Toggle theme">
             {props.theme === "dark" ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
           </button>

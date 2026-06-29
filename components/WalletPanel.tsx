@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Copy, LogOut, Plug, QrCode, RefreshCw, Wallet, WifiOff, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, LogOut, QrCode, RefreshCw, Wallet, WifiOff, X } from "lucide-react";
 import { useState } from "react";
 import { shortenPublicKey } from "@/lib/explorer";
 
@@ -141,19 +141,14 @@ export function WalletPanel(props: WalletPanelProps) {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        {isConnected ? (
+      {isConnected ? (
+        <div className="flex flex-col gap-3 sm:flex-row">
           <button className="button-secondary" type="button" onClick={props.onDisconnect}>
             <LogOut size={18} aria-hidden="true" />
             Disconnect
           </button>
-        ) : (
-          <button className="button-primary" type="button" onClick={props.onConnect} disabled={isConnecting}>
-            <Plug size={18} aria-hidden="true" />
-            {isConnecting ? "Connecting" : "Connect Wallet"}
-          </button>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       {isSwitchHelpOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050611]/75 p-4 backdrop-blur-sm">
