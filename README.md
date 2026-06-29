@@ -127,6 +127,7 @@ Add the final submission screenshots here:
 | Balance displayed | `public/screenshots/balance-displayed.png` |
 | Successful testnet transaction | `public/screenshots/transaction-success.png` |
 | Transaction result shown to the user | `public/screenshots/transaction-result.png` |
+| Explore Hash  | `public/screenshots/explore.png` |
 
 ![Wallet connected state](public/screenshots/wallet-connected.png)
 
@@ -135,6 +136,8 @@ Add the final submission screenshots here:
 ![Successful testnet transaction](public/screenshots/transaction-success.png)
 
 ![Transaction result shown to the user](public/screenshots/transaction-result.png)
+
+![Explore Hash](public/screenshots/explore.png)
 
 ## Useful Links
 
