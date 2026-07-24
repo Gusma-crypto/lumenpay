@@ -1,111 +1,204 @@
 # LumenPay Lite
 
-A multi-wallet Stellar Testnet payment tracker for the Level 2 Yellow Belt challenge.
+LumenPay Lite is a multi-wallet Stellar Testnet payment tracker built for the Yellow Belt Level 2 challenge.
 
-LumenPay Lite lets a user connect a supported Stellar wallet, send a native XLM payment, record it through a Soroban contract, and follow the resulting contract events in a synchronized activity feed.
+The app lets users connect a Stellar wallet, check Testnet XLM balance, send native XLM, record successful payments through a Soroban smart contract, and monitor contract events in a live activity feed.
 
-Panduan lengkap deployment, testing, pengambilan bukti, commit, dan submission tersedia di [`YELLOW_BELT_STEP_BY_STEP.md`](YELLOW_BELT_STEP_BY_STEP.md).
+Version history is available in [CHANGELOG.md](CHANGELOG.md). The detailed submission guide is available in [YELLOW_BELT_STEP_BY_STEP.md](YELLOW_BELT_STEP_BY_STEP.md).
 
+## Yellow Belt Scope
+
+### Yellow Belt Level 1
+
+- Wallet connection
+- Balance display
+- Send XLM
+- Transaction result
+- Explorer link
+
+### Yellow Belt Level 2
+
+- Multi-wallet support
+- Soroban contract deployment
+- Frontend contract call
+- Live activity feed
+- Transaction status pending/success/failed
+- Error handling
 
 ## Features
 
-* Multi-wallet connection with StellarWalletsKit
-* Wallet chooser with availability detection
-* Stellar Testnet network guard
-* Connected public key display
-* XLM balance lookup through Horizon Testnet
-* Native XLM testnet payment form
-* Recipient address validation
-* QR recipient scanning
-* Transaction preview before signing
-* Wallet-agnostic signing flow
-* Pending, success, and failed transaction states
-* Clear wallet-not-found, rejected-signature, and insufficient-balance errors
-* `LumenPayTracker` Soroban contract with persistent read/write storage
-* Contract call after a successful payment
-* Live contract-event synchronization every 6 seconds
-* Stellar Expert testnet explorer link
+- Multi-wallet connection with StellarWalletsKit
+- Wallet chooser with availability detection
+- Persistent wallet session after page refresh
+- Stellar Testnet network guard
+- Connected public key display
+- XLM balance lookup through Horizon Testnet
+- Native XLM Testnet payment form
+- Recipient address validation
+- QR recipient scanning
+- Transaction preview before signing
+- Wallet-agnostic signing flow
+- Transaction status: Pending, Submitting, Success, and Failed
+- Clear wallet-not-found, rejected-signature, and insufficient-balance errors
+- `LumenPayTracker` Soroban contract with persistent read/write storage
+- Contract call after a successful payment
+- Live contract event synchronization every 6 seconds
+- Stellar Expert Testnet explorer links
+- Responsive desktop and mobile layout
 
 ## Tech Stack
 
-* Next.js
-* React
-* TypeScript
-* Tailwind CSS
-* Stellar SDK
-* StellarWalletsKit
-* Soroban Rust SDK
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Stellar SDK
+- StellarWalletsKit
+- Soroban Rust SDK
 
-## Getting Started
+## Requirements
 
-Clone the repo:
+- Node.js 20+
+- npm
+- Rust and Cargo, only required for contract development/testing
+- Stellar CLI, only required for contract build/deployment
+- A supported Stellar wallet such as Freighter, xBull, Albedo, Rabet, or another wallet detected by StellarWalletsKit
+- Wallet set to Stellar Testnet
+- Testnet XLM balance
+
+If the account has no Testnet XLM, fund it with Stellar Friendbot.
+
+## Quick Start
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Gusma-crypto/lumenpay.git
 cd lumenpay
 ```
 
-Install dependencies:
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-Create the local environment file:
+### 3. Create the environment file
+
+Create `.env.local` in the project root:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Run the app:
-
-```bash
-npm run dev
-```
-
-Open:
-
-```txt
-http://localhost:3001
-```
-
-## Environment
+If `.env.example` is not available, create `.env.local` manually:
 
 ```env
 NEXT_PUBLIC_STELLAR_NETWORK=testnet
 NEXT_PUBLIC_HORIZON_URL=https://horizon-testnet.stellar.org
 NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-NEXT_PUBLIC_TRACKER_CONTRACT_ID=C...
+NEXT_PUBLIC_TRACKER_CONTRACT_ID=CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD
 ```
 
-## Requirements
+### 4. Run the development server
 
-* Node.js 20+
-* npm
-* At least one supported Stellar wallet (for example Freighter, xBull, Albedo, or Rabet)
-* Wallet set to Stellar Testnet
-* Testnet XLM balance
+```bash
+npm run dev
+```
 
-If the account is not funded yet, use the Friendbot link shown in the app.
+Open the app:
 
-## How to Test
+```txt
+http://127.0.0.1:3001
+```
 
-1. Open the app.
-2. Choose an available wallet.
-3. Make sure the wallet is on Stellar Testnet.
-4. Confirm the XLM balance is displayed.
-5. Enter a recipient Stellar public key.
-6. Enter an XLM amount.
-7. Review the transaction preview.
-8. Approve the transaction in Freighter.
-9. Check the transaction result in the app.
-10. Open the Stellar Expert testnet link to verify the transaction.
-11. Approve the second signature to record the successful payment in `LumenPayTracker`.
-12. Confirm the contract call status and new live activity event.
+### 5. Build for production
+
+```bash
+npm run build
+```
+
+### 6. Run validation checks
+
+```bash
+npm run lint
+npx tsc --noEmit
+```
+
+For the Soroban contract:
+
+```bash
+cd contracts
+cargo test
+cd ..
+```
+
+## How to Use the App
+
+### 1. Connect a wallet
+
+1. Open `http://127.0.0.1:3001`.
+2. Click `Connect Wallet`.
+3. Choose an available Stellar wallet.
+4. Approve the connection in the wallet extension or wallet app.
+5. Make sure the wallet is using Stellar Testnet.
+
+If the selected wallet is not installed or not detected, the app shows a wallet-not-found notification and does not crash.
+
+### 2. Check balance
+
+1. Open the `My Wallets` page.
+2. Confirm the connected public key is displayed.
+3. Confirm the Testnet XLM balance is visible.
+4. Use the refresh button if the balance was recently funded.
+
+### 3. Send XLM
+
+1. Open the `Send Payment` page.
+2. Enter a recipient Stellar public key.
+3. Enter the XLM amount.
+4. Optionally enter a memo.
+5. Click review.
+6. Review the payment details in the popup.
+7. Approve the payment transaction in your wallet.
+
+The transaction status moves through:
+
+```txt
+Pending...
+Submitting...
+Success
+```
+
+If the transaction fails, the app shows `Failed` with an error message.
+
+### 4. Record the payment on the contract
+
+After a successful XLM payment, the frontend prepares a `record_payment` contract call.
+
+1. Approve the second wallet signature for `record_payment`.
+2. Wait for the contract call status to complete.
+3. Copy the contract call hash from the UI or Activity Feed.
+4. Open the hash in Stellar Expert Testnet to verify it.
+
+### 5. View activity
+
+1. Open the `Activity Feed` page.
+2. The app syncs contract events every 6 seconds.
+3. Use search to filter by address, transaction hash, amount, or event type.
+4. Open event hashes in Stellar Expert Testnet.
+
+### 6. Manage settings
+
+The `Settings` page includes wallet profile, application preferences, display options, security preferences, and local data clearing.
+
+Wallet sessions are persisted in browser storage. Refreshing the page keeps the wallet shown as connected until the user disconnects or clears local data.
 
 ## Smart Contract
 
-The contract source and tests are in `contracts/lumenpay_tracker`. It exposes:
+The contract source and tests are in `contracts/lumenpay_tracker`.
+
+The contract exposes:
 
 ```txt
 record_payment(sender, recipient, amount, payment_hash)
@@ -113,18 +206,22 @@ get_payment(id)
 get_payment_count()
 ```
 
-`record_payment` requires sender authorization, stores the record, and emits a `payment` event. Build, test, and deploy instructions are in [`contracts/README.md`](contracts/README.md).
+`record_payment` requires sender authorization, stores the record, prevents duplicate payment hashes, and emits a payment event.
 
-Deployment values are intentionally not fabricated:
+Build, test, and deploy instructions are available in [contracts/README.md](contracts/README.md).
+
+## Contract Evidence
+
+Deployment values are intentionally not fabricated.
 
 | Evidence | Value |
 | --- | --- |
 | Testnet contract ID | `CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD` |
 | Deployment transaction | [`7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb`](https://stellar.expert/explorer/testnet/tx/7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb) |
-| Successful `record_payment` validation | [`21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35`](https://stellar.expert/explorer/testnet/tx/21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35) |
-| Successful frontend `record_payment` | Run through the connected wallet and add its hash before final submission |
+| Successful CLI `record_payment` validation | [`21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35`](https://stellar.expert/explorer/testnet/tx/21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35) |
+| Successful frontend `record_payment` | Pending frontend wallet evidence. Replace this with the transaction hash produced after sending a payment from the app and approving the `record_payment` wallet signature. |
 
-The frontend remains fully usable for regular XLM payments when no contract ID is configured; the contract panel clearly shows `Awaiting deployment`.
+The CLI validation hash proves the deployed contract can execute `record_payment`. The frontend evidence must use a separate transaction hash from the browser wallet flow, not the deployment hash or the CLI validation hash.
 
 ## Project Structure
 
@@ -135,11 +232,11 @@ app/
   globals.css
 
 components/
+  AppHeader.tsx
+  AppSidebar.tsx
   WalletPanel.tsx
-  BalanceCard.tsx
   PaymentForm.tsx
   TransactionStatus.tsx
-  TransactionHistory.tsx
   LiveContractActivity.tsx
   AddressBook.tsx
 
@@ -151,6 +248,8 @@ lib/
   validation.ts
 
 public/
+  favicon.svg
+  logo.png
   screenshots/
 
 contracts/
@@ -159,73 +258,102 @@ contracts/
 
 ## Screenshots
 
-Add the final submission screenshots here:
+Available evidence screenshots:
 
 | Requirement | File |
 | --- | --- |
 | Wallet connected state | `public/screenshots/wallet-connected.png` |
 | Balance displayed | `public/screenshots/balance-displayed.png` |
-| Successful testnet transaction | `public/screenshots/transaction-success.png` |
+| Successful Testnet transaction | `public/screenshots/transaction-success.png` |
 | Transaction result shown to the user | `public/screenshots/transaction-result.png` |
-| Explore Hash  | `public/screenshots/explore.png` |
-| Level 2 wallet options | `public/screenshots/level2-wallet-options.png` |
-| Level 2 contract call | `public/screenshots/level2-contract-call.png` |
-| Level 2 live feed | `public/screenshots/level2-live-feed.png` |
-| Level 2 transaction states | `public/screenshots/level2-transaction-status.png` |
+| Explorer hash verification | `public/screenshots/explore.png` |
 
 ![Wallet connected state](public/screenshots/wallet-connected.png)
 
 ![Balance displayed](public/screenshots/balance-displayed.png)
 
-![Successful testnet transaction](public/screenshots/transaction-success.png)
+![Successful Testnet transaction](public/screenshots/transaction-success.png)
 
 ![Transaction result shown to the user](public/screenshots/transaction-result.png)
 
-![Explore Hash](public/screenshots/explore.png)
+![Explorer hash verification](public/screenshots/explore.png)
+
+Pending Level 2 submission screenshots:
+
+| Requirement | Target File |
+| --- | --- |
+| Multi-wallet options visible | `public/screenshots/level2-wallet-options.png` |
+| Frontend contract call success | `public/screenshots/level2-contract-call.png` |
+| Live activity feed | `public/screenshots/level2-live-feed.png` |
+| Transaction pending/success/fail states | `public/screenshots/level2-transaction-status.png` |
+
+Capture these screenshots after the frontend wallet `record_payment` flow is completed.
 
 ## Useful Links
 
-* Repository: https://github.com/Gusma-crypto/lumenpay.git
-* Stellar Testnet Horizon: https://horizon-testnet.stellar.org
-* Stellar Expert Testnet: https://stellar.expert/explorer/testnet
-* Freighter: https://www.freighter.app
+- Repository: https://github.com/Gusma-crypto/lumenpay.git
+- Stellar Testnet Horizon: https://horizon-testnet.stellar.org
+- Stellar Expert Testnet: https://stellar.expert/explorer/testnet
+- Stellar Friendbot: https://friendbot.stellar.org
+- Stellar Developers: https://developers.stellar.org
+- Freighter: https://www.freighter.app
 
 ## Troubleshooting
 
-### A wallet is not detected
+### Wallet is not detected
 
 Install or open the selected wallet, unlock it, and refresh the page.
 
-### Wrong network
+### Wallet is on the wrong network
 
 Switch the connected wallet to Stellar Testnet.
 
 ### Account has no balance
 
-Fund the account with Friendbot, then refresh the balance.
+Fund the account with Friendbot, then refresh the balance in the app.
 
 ### Transaction fails
 
-Check that the recipient address is valid, the amount is greater than zero, the wallet has enough testnet XLM, and Freighter is still on Testnet.
+Check that the recipient address is valid, the amount is greater than zero, the wallet has enough Testnet XLM, and the wallet is still on Stellar Testnet.
+
+### Port 3001 is already in use
+
+Stop the existing dev server or run the app on a different port.
 
 ## Submission Checklist
 
 - [x] Public GitHub repository
-- [x] `README.md`
+- [x] README in English
 - [x] Project description
-- [x] Setup instructions
-- [ ] Screenshot: wallet connected state
-- [ ] Screenshot: balance displayed
-- [ ] Screenshot: successful testnet transaction
-- [ ] Screenshot: transaction result shown to the user
+- [x] Setup instructions from clone to run
+- [x] Usage guide
+- [x] Wallet connected screenshot
+- [x] Balance displayed screenshot
+- [x] Successful Testnet transaction screenshot
+- [x] Transaction result screenshot
 - [x] Transaction result shown in the UI
 - [x] Transaction hash shown in the UI
-- [x] Stellar Expert testnet link shown in the UI
+- [x] Stellar Expert Testnet link shown in the UI
 - [x] StellarWalletsKit multi-wallet options
-- [x] Soroban contract source and unit test
+- [x] Soroban contract source and unit tests
 - [x] Frontend contract read/write integration
-- [x] Live contract-event polling
+- [x] Live contract event polling
 - [x] Payment and contract pending/success/fail states
-- [x] Deploy `LumenPayTracker` to Testnet and set its contract ID
-- [x] Add a verifiable contract call transaction hash
-- [ ] Capture Level 2 submission screenshots
+- [x] Deployed `LumenPayTracker` Testnet contract ID
+- [x] Verifiable CLI contract call transaction hash
+- [ ] Frontend wallet `record_payment` transaction hash
+- [ ] Level 2 submission screenshots
+- [ ] Live demo URL, if deployed
+
+## Final Submission Steps
+
+Before submitting Yellow Belt Level 2:
+
+1. Run the app locally or open the deployed site.
+2. Connect a Stellar Testnet wallet.
+3. Send a Testnet XLM payment from the app.
+4. Approve the second wallet signature for `record_payment`.
+5. Copy the frontend `record_payment` transaction hash into the contract evidence table.
+6. Capture the pending Level 2 screenshots listed above.
+7. Add the live demo URL if the frontend is deployed.
+8. Commit and push the final README and screenshot updates.

@@ -18,15 +18,18 @@ type WalletPanelProps = {
   onDisconnect: () => void;
   wallets: WalletOption[];
   walletName: string | null;
+  connectedWalletId: string | null;
 };
 
 export function WalletPanel(props: WalletPanelProps) {
   const [isSwitchHelpOpen, setIsSwitchHelpOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy");
-  const isConnected = props.status === "connected" && props.publicKey;
+  const isConnected = props.status === "connected" && Boolean(props.publicKey);
   const isConnecting = props.status === "connecting";
   const StatusIcon = isConnected ? CheckCircle2 : WifiOff;
+  const walletSecurityLabel = isConnected ? (props.walletName ?? "Wallet connected") : "Ready to connect";
+  const networkStatusLabel = isConnected ? (props.isTestnet ? "Testnet ready" : "Needs Testnet") : "Waiting for wallet";
 
   return (
     <section className="panel-card">
@@ -46,11 +49,11 @@ export function WalletPanel(props: WalletPanelProps) {
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
           <p className="text-xs font-semibold uppercase text-violet-200/55">Wallet Security</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-100">{props.walletName ?? "Wallet signed"}</p>
+          <p className="mt-1 text-sm font-semibold text-cyan-100">{walletSecurityLabel}</p>
         </div>
         <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
           <p className="text-xs font-semibold uppercase text-violet-200/55">Network Status</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-100">{props.isTestnet ? "Testnet ready" : "Needs Testnet"}</p>
+          <p className="mt-1 text-sm font-semibold text-cyan-100">{networkStatusLabel}</p>
         </div>
         <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
           <p className="text-xs font-semibold uppercase text-violet-200/55">Payment Asset</p>
@@ -111,24 +114,31 @@ export function WalletPanel(props: WalletPanelProps) {
         <div className="mb-5">
           <p className="mb-3 text-sm font-semibold text-cyan-100">Available wallet options</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {props.wallets.slice(0, 8).map((wallet) => (
-              <button
-                key={wallet.id}
-                className="flex min-h-14 items-center gap-3 rounded-lg border border-line/55 bg-[#090a18] p-3 text-left transition hover:border-cyan-300 hover:bg-[#11132a] disabled:hover:border-line/55"
-                type="button"
-                onClick={() => props.onConnect(wallet.id)}
-                disabled={isConnecting}
-                title={wallet.isAvailable ? `Connect ${wallet.name}` : `${wallet.name} is not detected`}
-              >
-                <img className="h-8 w-8 rounded-md" src={wallet.icon} alt="" />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-ink">{wallet.name}</span>
-                  <span className={`block text-xs ${wallet.isAvailable ? "text-cyan-300" : "text-violet-200/55"}`}>
-                    {wallet.isAvailable ? "Ready" : "Not detected"}
+            {props.wallets.slice(0, 8).map((wallet) => {
+              const isActiveWallet = isConnected && props.connectedWalletId === wallet.id;
+              return (
+                <button
+                  key={wallet.id}
+                  className={`flex min-h-14 items-center gap-3 rounded-lg border p-3 text-left transition disabled:hover:border-line/55 ${
+                    isActiveWallet
+                      ? "border-emerald-300 bg-emerald-50"
+                      : "border-line/55 bg-[#090a18] hover:border-cyan-300 hover:bg-[#11132a]"
+                  }`}
+                  type="button"
+                  onClick={() => props.onConnect(wallet.id)}
+                  disabled={isConnecting || isActiveWallet}
+                  title={wallet.isAvailable ? `Connect ${wallet.name}` : `${wallet.name} is not detected`}
+                >
+                  <img className="h-8 w-8 rounded-md" src={wallet.icon} alt="" />
+                  <span className="min-w-0">
+                    <span className={`block truncate text-sm font-semibold ${isActiveWallet ? "text-emerald-900" : "text-ink"}`}>{wallet.name}</span>
+                    <span className={`block text-xs ${isActiveWallet ? "text-emerald-700" : wallet.isAvailable ? "text-cyan-300" : "text-violet-200/55"}`}>
+                      {isActiveWallet ? "Connected" : wallet.isAvailable ? "Ready" : "Not detected"}
+                    </span>
                   </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
           {props.wallets.length === 0 ? (
             <button className="button-primary w-full justify-center" type="button" onClick={() => props.onConnect()} disabled={isConnecting}>

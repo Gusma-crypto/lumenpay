@@ -3,17 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   Box,
   CheckCircle2,
   ClipboardCheck,
   Coins,
   Copy,
   ExternalLink,
+  Filter,
   Github,
+  Headphones,
+  Moon,
+  Monitor,
+  RefreshCw,
   Radio,
+  Search,
   Send,
   ShieldCheck,
   Sparkles,
+  Sun,
   Users,
   WalletCards,
   X
@@ -23,7 +31,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PaymentForm } from "@/components/PaymentForm";
 import { TransactionStatus } from "@/components/TransactionStatus";
 import { WalletPanel } from "@/components/WalletPanel";
-import { LiveContractActivity } from "@/components/LiveContractActivity";
 import { getTestnetExplorerUrl, shortenPublicKey } from "@/lib/explorer";
 import {
   connectWallet as connectSelectedWallet,
@@ -31,6 +38,7 @@ import {
   getWalletErrorMessage,
   getWalletNetwork,
   listWallets,
+  restoreWallet,
   signWithWallet,
   WalletOption
 } from "@/lib/wallets";
@@ -49,7 +57,6 @@ import {
   fetchAccountBalances,
   fetchPaymentHistory,
   getStellarErrorMessage,
-  IssuedAssetBalance,
   NETWORK_PASSPHRASE,
   PaymentHistoryItem,
   submitSignedTransaction
@@ -66,23 +73,29 @@ export type TransactionResult = {
   message?: string;
 };
 
-type RecentTransaction = {
-  amount: string;
-  hash: string;
-  recipient: string;
-};
-
 type PendingPayment = {
   amount: string;
   memo: string;
   recipient: string;
 };
 
+type CompletedPayment = PendingPayment & {
+  hash: string;
+};
+
 type AppNotification = {
   id: number;
-  type: "form" | "success";
+  type: "form" | "success" | "warning";
   title: string;
   message: string;
+};
+
+const STORED_WALLET_KEY = "lumenpay.connectedWallet";
+
+type StoredWalletSession = {
+  address: string;
+  walletId: string;
+  walletName: string;
 };
 
 const FALLBACK_WALLETS: WalletOption[] = [
@@ -93,20 +106,25 @@ const FALLBACK_WALLETS: WalletOption[] = [
 ];
 
 function NotificationPopup(props: { notification: AppNotification; onClose: () => void }) {
-  const Icon = props.notification.type === "success" ? CheckCircle2 : ClipboardCheck;
+  const Icon =
+    props.notification.type === "success"
+      ? CheckCircle2
+      : props.notification.type === "warning"
+        ? AlertTriangle
+        : ClipboardCheck;
 
   return (
-    <div className="fixed right-4 top-4 z-[60] w-[calc(100vw-2rem)] max-w-sm animate-fade-in rounded-lg border border-cyan-300/45 bg-[#101124]/95 p-4 shadow-panel ring-1 ring-cyan-300/15 backdrop-blur">
+    <div className={`notification-popup animate-fade-in ${props.notification.type}`}>
       <div className="flex items-start gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-cyan-400/15 text-cyan-300">
+        <div className="notification-icon">
           <Icon size={20} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-ink">{props.notification.title}</p>
-          <p className="mt-1 text-sm leading-6 text-violet-100/75">{props.notification.message}</p>
+          <p className="notification-title">{props.notification.title}</p>
+          <p className="notification-message">{props.notification.message}</p>
         </div>
         <button
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line/50 bg-[#0d0e1f] text-cyan-200 transition hover:border-cyan-300 hover:bg-[#151633]"
+          className="notification-close"
           type="button"
           onClick={props.onClose}
           aria-label="Close notification"
@@ -125,14 +143,14 @@ export default function Home() {
   const [walletStatus, setWalletStatus] = useState<WalletStatus>("disconnected");
   const [walletError, setWalletError] = useState<string | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
-  const [assets, setAssets] = useState<IssuedAssetBalance[]>([]);
-  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
-  const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [_assets, setAssets] = useState<unknown[]>([]);
+  const [_isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const [_balanceError, setBalanceError] = useState<string | null>(null);
   const [transactionResult, setTransactionResult] = useState<TransactionResult>({ status: "idle" });
   const [freighterNetwork, setFreighterNetwork] = useState<string | null>(null);
   const [freighterNetworkPassphrase, setFreighterNetworkPassphrase] = useState<string | null>(null);
-  const [recentTransaction, setRecentTransaction] = useState<RecentTransaction | null>(null);
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
+  const [completedPayment, setCompletedPayment] = useState<CompletedPayment | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -140,19 +158,83 @@ export default function Home() {
   const [notification, setNotification] = useState<AppNotification | null>(null);
   const [wallets, setWallets] = useState<WalletOption[]>(FALLBACK_WALLETS);
   const [walletName, setWalletName] = useState<string | null>(null);
+  const [connectedWalletId, setConnectedWalletId] = useState<string | null>(null);
   const [contractEvents, setContractEvents] = useState<ContractPaymentEvent[]>([]);
   const [contractError, setContractError] = useState<string | null>(null);
   const [contractStatus, setContractStatus] = useState<ContractCallStatus>("idle");
-  const [contractHash, setContractHash] = useState<string | null>(null);
+  const [_contractHash, setContractHash] = useState<string | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [paymentFormResetSignal, setPaymentFormResetSignal] = useState(0);
+  const [activityQuery, setActivityQuery] = useState("");
+  const [autoCopyTransactionLink, setAutoCopyTransactionLink] = useState(true);
+  const [autoRecordContract, setAutoRecordContract] = useState(true);
+  const [compactMode, setCompactMode] = useState(false);
+  const [confirmTransactions, setConfirmTransactions] = useState(true);
 
   const isConnected = walletStatus === "connected" && Boolean(publicKey);
   const isSubmitting = transactionResult.status === "signing" || transactionResult.status === "submitting";
   const isFreighterTestnet = freighterNetworkPassphrase === NETWORK_PASSPHRASE;
+  const isSendPaymentPage = activeSection === "send-payment";
+  const isActivityPage = activeSection === "activity";
+  const isWalletPage = activeSection === "wallets";
+  const isContractPage = activeSection === "contracts";
+  const isSettingsPage = activeSection === "settings";
+  const isAboutPage = activeSection === "about";
+  const contractExplorerUrl = `https://stellar.expert/explorer/testnet/contract/${TRACKER_CONTRACT_ID}`;
+  const displayedContractId = TRACKER_CONTRACT_ID || "Contract not configured";
+  const previewPayment = pendingPayment ?? completedPayment;
+  const paymentStepIndex =
+    transactionResult.status === "success"
+      ? 4
+      : isSubmitting
+        ? 3
+        : pendingPayment
+          ? 2
+          : 1;
+  const activityRows = [
+    ...paymentHistory.map((item) => ({
+      id: `payment-${item.id}`,
+      type: item.direction === "sent" ? "PaymentSent" : "PaymentReceived",
+      description: item.direction === "sent" ? "XLM payment sent" : "XLM payment received",
+      status: "SUCCESS",
+      tone: "success",
+      amount: `${Number(item.amount).toFixed(2)} ${item.asset}`,
+      from: item.from,
+      to: item.to,
+      ledger: item.id,
+      hash: item.hash,
+      time: new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.createdAt)),
+      icon: Send
+    })),
+    ...contractEvents.map((event) => ({
+      id: `contract-${event.id}`,
+      type: "PaymentRecorded",
+      description: "Payment recorded on contract",
+      status: "SUCCESS",
+      tone: "success",
+      amount: `${Number(event.amount).toFixed(2)} XLM`,
+      from: event.sender,
+      to: event.recipient,
+      ledger: String(event.ledger),
+      hash: event.contractHash,
+      time: `Ledger ${event.ledger}`,
+      icon: Box
+    }))
+  ].slice(0, 12);
+  const normalizedActivityQuery = activityQuery.trim().toLowerCase();
+  const filteredActivityRows = normalizedActivityQuery
+    ? activityRows.filter((row) =>
+        [row.type, row.description, row.status, row.amount, row.from, row.to, row.hash, row.ledger]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedActivityQuery)
+      )
+    : activityRows;
+  const activityPendingCount = contractStatus === "pending" || isSubmitting ? 1 : 0;
+  const activityFailedCount = contractStatus === "failed" || transactionResult.status === "error" ? 1 : 0;
 
   function showNotification(type: AppNotification["type"], title: string, message: string) {
     setNotification({
@@ -231,6 +313,45 @@ export default function Home() {
     void listWallets().then((options) => setWallets(options.length > 0 ? options : FALLBACK_WALLETS)).catch(() => setWallets(FALLBACK_WALLETS));
   }, []);
 
+  useEffect(() => {
+    const rawSession = window.localStorage.getItem(STORED_WALLET_KEY);
+    if (!rawSession) {
+      return;
+    }
+
+    let storedSession: StoredWalletSession;
+    try {
+      storedSession = JSON.parse(rawSession) as StoredWalletSession;
+    } catch {
+      window.localStorage.removeItem(STORED_WALLET_KEY);
+      return;
+    }
+
+    if (!storedSession.address || !storedSession.walletId) {
+      window.localStorage.removeItem(STORED_WALLET_KEY);
+      return;
+    }
+
+    setPublicKey(storedSession.address);
+    setWalletName(storedSession.walletName);
+    setConnectedWalletId(storedSession.walletId);
+    setWalletStatus("connected");
+
+    void restoreWallet(storedSession.walletId)
+      .then((connection) => {
+        setWalletName(connection.walletName);
+        setFreighterNetwork(connection.network.network);
+        setFreighterNetworkPassphrase(connection.network.networkPassphrase);
+        setWalletStatus("connected");
+      })
+      .catch((error) => {
+        const message = getWalletErrorMessage(error);
+        setWalletStatus("error");
+        setWalletError(message);
+        showNotification("warning", "Session Wallet Tidak Aktif", message);
+      });
+  }, []);
+
   const refreshContractEvents = useCallback(async () => {
     if (!CONTRACT_CONFIGURED) {
       setContractEvents([]);
@@ -260,6 +381,16 @@ export default function Home() {
       setIsWalletModalOpen(true);
       return;
     }
+
+    const requestedWallet = wallets.find((wallet) => wallet.id === walletId);
+    if (requestedWallet && !requestedWallet.isAvailable) {
+      const message = `${requestedWallet.name} tidak terdeteksi di browser ini. Install atau buka wallet tersebut, lalu refresh halaman sebelum connect.`;
+      setWalletStatus(publicKey ? "connected" : "disconnected");
+      setWalletError(message);
+      showNotification("warning", "Wallet Tidak Terdeteksi", message);
+      return;
+    }
+
     setWalletStatus("connecting");
     setWalletError(null);
 
@@ -268,33 +399,54 @@ export default function Home() {
 
       setPublicKey(connection.address);
       setWalletName(connection.walletName);
+      setConnectedWalletId(connection.walletId);
       setFreighterNetwork(connection.network.network);
       setFreighterNetworkPassphrase(connection.network.networkPassphrase);
       setWalletStatus("connected");
       setIsWalletModalOpen(false);
+      window.localStorage.setItem(
+        STORED_WALLET_KEY,
+        JSON.stringify({
+          address: connection.address,
+          walletId: connection.walletId,
+          walletName: connection.walletName
+        } satisfies StoredWalletSession)
+      );
+      showNotification("success", "Wallet Connected", `${connection.walletName} berhasil terkoneksi ke Stellar Testnet.`);
     } catch (error) {
+      const message = getWalletErrorMessage(error);
       setPublicKey(null);
+      setWalletName(null);
+      setConnectedWalletId(null);
+      window.localStorage.removeItem(STORED_WALLET_KEY);
       setFreighterNetwork(null);
       setFreighterNetworkPassphrase(null);
       setWalletStatus("error");
-      setWalletError(getWalletErrorMessage(error));
+      setWalletError(message);
+      showNotification("warning", "Gagal Connect Wallet", message);
     }
   }
 
   async function disconnectWallet() {
     await disconnectActiveWallet().catch(() => undefined);
+    window.localStorage.removeItem(STORED_WALLET_KEY);
     setPublicKey(null);
     setWalletName(null);
+    setConnectedWalletId(null);
     setFreighterNetwork(null);
     setFreighterNetworkPassphrase(null);
     setWalletStatus("disconnected");
     setWalletError(null);
     setTransactionResult({ status: "idle" });
-    setRecentTransaction(null);
     setPendingPayment(null);
+    setCompletedPayment(null);
     setPaymentHistory([]);
     setHistoryError(null);
     setRecipientSuggestion(null);
+    setContractHash(null);
+    setContractError(null);
+    setContractEvents([]);
+    setContractStatus(CONTRACT_CONFIGURED ? "idle" : "skipped");
   }
 
   async function refreshFreighterNetwork() {
@@ -402,11 +554,13 @@ export default function Home() {
         hash: response.hash,
         message: "Payment sent successfully on Stellar Testnet."
       });
-      setRecentTransaction({
+      setCompletedPayment({
         amount,
         hash: response.hash,
+        memo,
         recipient: destinationPublicKey
       });
+      setPaymentFormResetSignal((currentSignal) => currentSignal + 1);
       showNotification("success", "Transaction Successful", "Payment berhasil dikirim ke Stellar Testnet.");
 
       await refreshBalance();
@@ -444,14 +598,15 @@ export default function Home() {
 
   function navigateTo(section: string) {
     setActiveSection(section);
-    if (section === "wallets") {
-      setIsWalletModalOpen(true);
+    setIsWalletModalOpen(false);
+
+    if (["send-payment", "activity", "wallets", "contracts", "settings", "about"].includes(section)) {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
       return;
     }
-    if (section === "settings") {
-      setIsSettingsOpen(true);
-      return;
-    }
+
     const targetId =
       section === "send-payment"
         ? "send-payment"
@@ -498,7 +653,958 @@ export default function Home() {
         }
       />
 
-      <div className="dashboard-content">
+      <div className={`dashboard-content ${isSendPaymentPage || isActivityPage || isWalletPage || isContractPage || isSettingsPage ? "send-only-content" : ""}`}>
+        {isSendPaymentPage ? (
+          <section className="send-page" id="send-payment">
+            <div className="send-page-heading">
+              <div className="breadcrumb-row">
+                <span>⌂</span>
+                <span>/</span>
+                <strong>Send Payment</strong>
+              </div>
+              <h1>Send Payment</h1>
+              <p>Send XLM to any Stellar address and record it on-chain via LumenPay Tracker.</p>
+            </div>
+
+            <div className="send-steps" aria-label="Payment progress">
+              {[
+                { step: 1, label: "Input" },
+                { step: 2, label: "Review" },
+                { step: 3, label: "Sign & Send" },
+                { step: 4, label: "Complete" }
+              ].map((item) => (
+                <div
+                  className={
+                    item.step === paymentStepIndex
+                      ? `active${item.step === 4 ? " final-active" : ""}`
+                      : item.step < paymentStepIndex
+                        ? "complete"
+                        : ""
+                  }
+                  key={item.step}
+                >
+                  <span>{item.step}</span>
+                  <strong>{item.label}</strong>
+                </div>
+              ))}
+            </div>
+
+            <div className="send-layout">
+              <PaymentForm
+                isConnected={isConnected}
+	                isSubmitting={isSubmitting}
+	                balance={balance}
+	                onSendPayment={reviewPayment}
+	                onEdit={() => {
+	                  setTransactionResult({ status: "idle" });
+	                  setCompletedPayment(null);
+	                }}
+	                recipientSuggestion={recipientSuggestion}
+	                resetSignal={paymentFormResetSignal}
+	              />
+
+              <aside className="send-side">
+                <section className="transaction-preview-card">
+                  <div className="preview-heading">
+                    <div className="send-card-icon">
+                      <Send size={23} aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h2>Transaction Preview</h2>
+                      <p>Please review your payment details before signing.</p>
+                    </div>
+                    <span>Stellar Testnet</span>
+                  </div>
+
+	                  <div className="preview-box">
+	                    <div>
+	                      <span>From</span>
+	                      <strong>{publicKey ? shortenPublicKey(publicKey) : "Connect wallet"}</strong>
+	                    </div>
+	                    <div>
+	                      <span>To</span>
+	                      <strong>{previewPayment ? shortenPublicKey(previewPayment.recipient) : "Recipient"}</strong>
+	                    </div>
+	                    <div>
+	                      <span>Amount</span>
+	                      <strong>{previewPayment ? `${Number(previewPayment.amount).toFixed(7)} XLM` : "0.0000000 XLM"}</strong>
+	                    </div>
+	                    <div>
+	                      <span>Network Fee</span>
+	                      <strong>≈ {ESTIMATED_FEE_XLM} XLM</strong>
+	                    </div>
+	                    <div className="preview-total">
+	                      <span>Total</span>
+	                      <strong>
+	                        {previewPayment
+	                          ? `${(Number(previewPayment.amount) + Number(ESTIMATED_FEE_XLM)).toFixed(5)} XLM`
+	                          : `${ESTIMATED_FEE_XLM} XLM`}
+	                      </strong>
+	                    </div>
+                  </div>
+
+                  <div className="preview-warning">
+                    <ShieldCheck size={24} aria-hidden="true" />
+                    <p>You will be asked to confirm and sign this transaction in your connected Stellar wallet.</p>
+                  </div>
+
+                  <TransactionStatus result={transactionResult} />
+                </section>
+
+                <section className="recent-activity-card">
+                  <div className="recent-heading">
+                    <div>
+                      <Activity size={18} aria-hidden="true" />
+                      <h2>Recent Activity</h2>
+                    </div>
+                    <button type="button" onClick={() => navigateTo("activity")}>View All</button>
+                  </div>
+                  <div className="recent-list">
+                    {paymentHistory.length === 0 && contractEvents.length === 0 ? (
+                      <p className="recent-empty">
+                        {isConnected ? "No activity yet for this wallet." : "Connect a wallet to load recent activity."}
+                      </p>
+                    ) : null}
+                    {paymentHistory.slice(0, 2).map((item) => (
+                      <article key={item.id}>
+                        <i><Send size={20} aria-hidden="true" /></i>
+                        <div>
+                          <strong>Payment{item.direction === "sent" ? "Sent" : "Received"}</strong>
+                          <span>{item.direction === "sent" ? "To" : "From"}: {shortenPublicKey(item.direction === "sent" ? item.to : item.from)} · {Number(item.amount).toFixed(2)} {item.asset}</span>
+                        </div>
+                        <b>SUCCESS</b>
+                      </article>
+                    ))}
+                    {contractEvents.slice(0, 2).map((event) => (
+                      <article key={event.id}>
+                        <i className="contract"><Box size={20} aria-hidden="true" /></i>
+                        <div>
+                          <strong>PaymentRecorded</strong>
+                          <span>Contract: LumenPayTracker</span>
+                        </div>
+                        <b>SUCCESS</b>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </aside>
+            </div>
+          </section>
+        ) : isActivityPage ? (
+          <section className="activity-page" id="activity">
+            <div className="activity-page-heading">
+              <div>
+                <h1>Live Activity Feed <span>Live</span></h1>
+                <p>Real-time stream of on-chain payment records and contract events from the LumenPayTracker smart contract.</p>
+              </div>
+              <div className="activity-tools">
+                <label>
+                  <Search size={18} aria-hidden="true" />
+                  <input
+                    value={activityQuery}
+                    onChange={(event) => setActivityQuery(event.target.value)}
+                    placeholder="Search by address, tx hash..."
+                  />
+                </label>
+                <button type="button" aria-label="Filter activity" title="Filter activity">
+                  <Filter size={18} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void refreshPaymentHistory();
+                    void refreshContractEvents();
+                  }}
+                  disabled={isHistoryLoading || isContractLoading}
+                  aria-label="Refresh activity"
+                  title="Refresh activity"
+                >
+                  <RefreshCw className={isHistoryLoading || isContractLoading ? "animate-spin" : ""} size={18} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            {historyError || contractError ? (
+              <div className="activity-error-banner">
+                {historyError ?? contractError}
+              </div>
+            ) : null}
+
+            <section className="activity-stat-grid">
+              {[
+                { label: "Total Events", value: filteredActivityRows.length, note: "On-chain events", icon: Box, tone: "purple" },
+                { label: "Successful", value: filteredActivityRows.length, note: "This session", icon: CheckCircle2, tone: "green" },
+                { label: "Pending", value: activityPendingCount, note: "Waiting for confirmation", icon: Activity, tone: "orange" },
+                { label: "Failed", value: activityFailedCount, note: "This session", icon: X, tone: "red" }
+              ].map((stat) => {
+                const Icon = stat.icon;
+                return (
+                  <article className="activity-stat-card" key={stat.label}>
+                    <i className={stat.tone}><Icon size={28} aria-hidden="true" /></i>
+                    <div>
+                      <span>{stat.label}</span>
+                      <strong>{stat.value}</strong>
+                      <small>{stat.note}</small>
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+
+            <section className="activity-table-card">
+              <div className="activity-table-head">
+                <span>Event</span>
+                <span>Amount</span>
+                <span>From</span>
+                <span>To</span>
+                <span>Time</span>
+              </div>
+              {filteredActivityRows.length === 0 ? (
+                <div className="activity-empty-state">
+                  <Box size={32} aria-hidden="true" />
+                  <strong>No activity found</strong>
+                  <p>{activityQuery ? "Try a different address or transaction hash." : "Connect your wallet or record payments to populate this feed."}</p>
+                </div>
+              ) : (
+                <div className="activity-table-body">
+                  {filteredActivityRows.map((row) => {
+                    const Icon = row.icon;
+                    return (
+                      <article className="activity-row" key={row.id}>
+                        <div className="activity-event-cell">
+                          <i className={row.tone}><Icon size={24} aria-hidden="true" /></i>
+                          <div>
+                            <strong>{row.type} <b className={row.tone}>{row.status}</b></strong>
+                            <span>{row.description}</span>
+                            <small>Ledger: {row.ledger}</small>
+                          </div>
+                        </div>
+                        <div className="activity-amount-cell">
+                          <strong>{row.amount}</strong>
+                          <span>≈ ${(Number(row.amount.split(" ")[0]) * 0.219).toFixed(2)} USD</span>
+                        </div>
+                        <div className="activity-address-cell">{shortenPublicKey(row.from)}</div>
+                        <div className="activity-address-cell">{shortenPublicKey(row.to)}</div>
+                        <div className="activity-time-cell">
+                          <span>{row.time}</span>
+                          <a href={getTestnetExplorerUrl(row.hash)} target="_blank" rel="noreferrer">
+                            View on Explorer <ExternalLink size={14} aria-hidden="true" />
+                          </a>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <div className="activity-footer-row">
+              <span><i /> Auto-updated every 6s</span>
+              <div>
+                <button type="button" disabled>‹</button>
+                <button type="button" className="active">1</button>
+                <button type="button" disabled>2</button>
+                <button type="button" disabled>3</button>
+                <button type="button" disabled>›</button>
+              </div>
+            </div>
+          </section>
+        ) : isWalletPage ? (
+          <section className="wallets-page" id="wallets">
+            <div className="wallets-main">
+              <div className="wallets-heading">
+                <h1>Wallets</h1>
+                <p>Connect and manage multiple Stellar wallets.<br />You can switch between wallets anytime.</p>
+              </div>
+
+              <section className="wallets-section">
+                <div className="wallets-section-heading">
+                  <h2>Available Wallets</h2>
+                  <p>Choose a wallet to connect to Stellar Testnet</p>
+                </div>
+                <div className="wallet-card-grid">
+                  {wallets
+                    .slice()
+                    .sort((first, second) => Number(second.id.toLowerCase() === "freighter") - Number(first.id.toLowerCase() === "freighter"))
+                    .slice(0, 6)
+                    .map((wallet) => {
+                    const isActiveWallet = isConnected && connectedWalletId === wallet.id;
+                    const isRecommended = wallet.id.toLowerCase() === "freighter" && !isActiveWallet;
+                    return (
+                      <article
+                        className={[
+                          "wallet-choice-card",
+                          isRecommended ? "featured" : "",
+                          isActiveWallet ? "connected" : "",
+                          !wallet.isAvailable ? "unavailable" : ""
+                        ].filter(Boolean).join(" ")}
+                        key={wallet.id}
+                      >
+                        {isActiveWallet ? (
+                          <span className="wallet-selected-mark connected"><CheckCircle2 size={18} aria-hidden="true" /></span>
+                        ) : isRecommended ? (
+                          <span className="wallet-selected-mark"><CheckCircle2 size={18} aria-hidden="true" /></span>
+                        ) : null}
+                        <div className="wallet-card-head">
+                          <img src={wallet.icon} alt="" />
+                          <div>
+                            <h3>{wallet.name}</h3>
+                            <span>{isRecommended ? "Browser Extension" : wallet.isAvailable ? "Stellar Wallet" : "Install Required"}</span>
+                          </div>
+                          {isRecommended ? <small>Recommended</small> : null}
+                          <b aria-hidden="true">›</b>
+                        </div>
+                        <div>
+                          <p>
+                            {isActiveWallet
+                              ? "Wallet ini sedang terkoneksi dan aktif digunakan."
+                              : wallet.isAvailable
+                                ? "Ready to connect on Stellar Testnet."
+                                : "Wallet tidak terdeteksi. Install atau buka wallet dahulu."}
+                          </p>
+                          {isActiveWallet ? <small className="connected-badge">Connected</small> : null}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void connectWallet(wallet.id)}
+                          disabled={walletStatus === "connecting" || isActiveWallet}
+                        >
+                          {walletStatus === "connecting"
+                            ? "Connecting..."
+                            : isActiveWallet
+                              ? "Connected"
+                              : wallet.isAvailable
+                                ? isConnected ? "Switch Wallet" : "Connect"
+                                : "Connect"}
+                        </button>
+                      </article>
+                    );
+                  })}
+                  <article className="wallet-choice-card more-wallets-card">
+                    <div className="more-wallet-icon"><WalletCards size={28} aria-hidden="true" /></div>
+                    <div>
+                      <h3>More Wallets</h3>
+                      <p>View other compatible Stellar wallets.</p>
+                    </div>
+                    <button type="button" onClick={() => setIsWalletModalOpen(true)}>View More</button>
+                  </article>
+                </div>
+              </section>
+
+              <section className="wallet-security-strip">
+                <ShieldCheck size={23} aria-hidden="true" />
+                <div>
+                  <strong>Your keys. Your funds.</strong>
+                  <p>LumenPay Lite never stores your private keys. We only connect to your wallet to perform transactions.</p>
+                </div>
+                <a href="https://stellar.org/learn/wallets" target="_blank" rel="noreferrer">
+                  Learn more about wallets <ExternalLink size={15} aria-hidden="true" />
+                </a>
+              </section>
+
+              <section className="recent-wallets-section">
+                <div className="recent-wallets-heading">
+                  <h2>Recently Used Wallets</h2>
+                  <button type="button" onClick={() => setIsWalletModalOpen(true)}>View All</button>
+                </div>
+                <div className="recent-wallet-list">
+                  {publicKey ? (
+                    <article>
+                      <div className="wallet-avatar-dot" />
+                      <div>
+                        <strong>{shortenPublicKey(publicKey)}</strong>
+                        <span>Connected</span>
+                      </div>
+                      <b>{balance ? `${Number(balance).toFixed(4)} XLM` : "Loading balance"}</b>
+                      <small>Connected just now</small>
+                      <button type="button" aria-label="Copy wallet address" onClick={() => void navigator.clipboard.writeText(publicKey)}>
+                        <Copy size={17} aria-hidden="true" />
+                      </button>
+                    </article>
+                  ) : (
+                    <p className="wallet-empty-row">No recently used wallet. Connect a wallet to start tracking balances and payments.</p>
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <aside className="wallets-side">
+              <section className="connected-wallet-card">
+                <h2>Connected Wallet</h2>
+                <div className="connected-wallet-identity">
+                  <div className="wallet-avatar-dot" />
+                  <div>
+                    <small>{walletName ?? "Stellar Wallet"}</small>
+                    <strong>{publicKey ? shortenPublicKey(publicKey) : "No wallet connected"}</strong>
+                    <span><i /> {isConnected ? "Connected" : "Disconnected"}</span>
+                  </div>
+                </div>
+                <p>Balance (Testnet)</p>
+                <div className="connected-wallet-balance">
+                  <strong>{balance ? Number(balance).toFixed(4) : "0.0000"}</strong>
+                  <span>XLM</span>
+                  <button type="button" onClick={refreshBalance} disabled={!isConnected} aria-label="Refresh balance">
+                    <RefreshCw size={18} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="connected-wallet-actions">
+                  <a
+                    href={publicKey ? `https://stellar.expert/explorer/testnet/account/${publicKey}` : "https://stellar.expert/explorer/testnet"}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink size={16} aria-hidden="true" />
+                    View on Explorer
+                  </a>
+                  <button type="button" onClick={() => setIsWalletModalOpen(true)}>
+                    <WalletCards size={16} aria-hidden="true" />
+                    Manage
+                  </button>
+                </div>
+              </section>
+
+              <section className="wallet-benefits-card">
+                <h2>Why connect multiple wallets?</h2>
+                {["Easily switch between accounts", "Manage different funds", "Track all your payments", "More flexibility for payments"].map((item) => (
+                  <p key={item}><CheckCircle2 size={18} aria-hidden="true" /> {item}</p>
+                ))}
+              </section>
+
+              <section className="wallet-tips-card">
+                <h2>Tips</h2>
+                <p>Make sure you are on Stellar Testnet when connecting your wallet.</p>
+                <button type="button" onClick={refreshFreighterNetwork}>
+                  <span /> Stellar Testnet
+                </button>
+              </section>
+            </aside>
+          </section>
+        ) : isContractPage ? (
+          <section className="contracts-page" id="contracts">
+            <div className="contracts-main">
+              <div className="contracts-heading">
+                <h1>Smart Contracts</h1>
+                <p>Interact with the LumenPayTracker smart contract and view on-chain data.</p>
+              </div>
+
+              <section className="contract-summary-grid">
+                <article className="contract-summary-card deployed">
+                  <i><Box size={27} aria-hidden="true" /></i>
+                  <div>
+                    <span>Deployed Contract <b className={CONTRACT_CONFIGURED ? "active" : "inactive"}>{CONTRACT_CONFIGURED ? "Active" : "Missing"}</b></span>
+                    <strong>{TRACKER_CONTRACT_ID ? `${TRACKER_CONTRACT_ID.slice(0, 5)}...LUMENPAYTRACKER` : "Not configured"}</strong>
+                    <small>{CONTRACT_CONFIGURED ? "Ready on Stellar Testnet" : "Set NEXT_PUBLIC_TRACKER_CONTRACT_ID"}</small>
+                  </div>
+                  <button type="button" onClick={() => void navigator.clipboard.writeText(TRACKER_CONTRACT_ID)} disabled={!TRACKER_CONTRACT_ID} aria-label="Copy contract address">
+                    <Copy size={15} aria-hidden="true" />
+                  </button>
+                </article>
+                <article className="contract-summary-card">
+                  <i className="green"><Coins size={27} aria-hidden="true" /></i>
+                  <div>
+                    <span>Total Records</span>
+                    <strong>{contractEvents.length}</strong>
+                    <small>Payment records</small>
+                  </div>
+                </article>
+                <article className="contract-summary-card">
+                  <i className="orange"><Radio size={27} aria-hidden="true" /></i>
+                  <div>
+                    <span>Total Events</span>
+                    <strong>{contractEvents.length}</strong>
+                    <small>Events emitted</small>
+                  </div>
+                </article>
+              </section>
+
+              <nav className="contract-tabs" aria-label="Contract sections">
+                <button className="active" type="button">Overview</button>
+                <button type="button" onClick={() => navigateTo("send-payment")}>Write (Call)</button>
+                <button type="button" onClick={refreshContractEvents}>Read (Query)</button>
+                <button type="button" onClick={() => navigateTo("activity")}>Events</button>
+              </nav>
+
+              <section className="contract-overview-panel">
+                <div className="contract-overview-copy">
+                  <h2>Contract Overview</h2>
+                  {[
+                    ["Contract Name", "LumenPayTracker"],
+                    ["Contract Address", displayedContractId],
+                    ["Network", "Stellar Testnet"],
+                    ["Deployer", publicKey ? shortenPublicKey(publicKey) : "Connected wallet"],
+                    ["Deployed At", CONTRACT_CONFIGURED ? "Stellar Testnet deployment" : "Awaiting configuration"],
+                    ["Description", "Records successful LumenPay payments and emits events that can be tracked in real-time."]
+                  ].map(([label, value]) => (
+                    <div className="contract-detail-line" key={label}>
+                      <span>{label}</span>
+                      <strong>{value}</strong>
+                    </div>
+                  ))}
+                  <div className="contract-detail-line">
+                    <span>Explorer</span>
+                    <a href={CONTRACT_CONFIGURED ? contractExplorerUrl : "https://stellar.expert/explorer/testnet"} target="_blank" rel="noreferrer">
+                      View on Stellar Expert <ExternalLink size={14} aria-hidden="true" />
+                    </a>
+                  </div>
+                </div>
+                <div className="contract-visual" aria-hidden="true">
+                  <div className="contract-document">
+                    <span />
+                    <span />
+                    <b>{"{}"}</b>
+                    <span />
+                  </div>
+                </div>
+              </section>
+
+              <section className="contract-actions-section">
+                <div>
+                  <h2>Quick Actions</h2>
+                  <p>Interact with the contract</p>
+                </div>
+                <div className="contract-action-grid">
+                  <article className="contract-action-card purple">
+                    <i><Send size={22} aria-hidden="true" /></i>
+                    <strong>Record Payment</strong>
+                    <p>Record a new payment to the contract.</p>
+                    <button type="button" onClick={() => navigateTo("send-payment")}>Record Payment →</button>
+                  </article>
+                  <article className="contract-action-card blue">
+                    <i><ClipboardCheck size={22} aria-hidden="true" /></i>
+                    <strong>Get Payment Count</strong>
+                    <p>Get the total number of payment records.</p>
+                    <button type="button" onClick={refreshContractEvents}>View Count</button>
+                  </article>
+                  <article className="contract-action-card green">
+                    <i><Search size={22} aria-hidden="true" /></i>
+                    <strong>Get Payment by ID</strong>
+                    <p>Retrieve details of a payment by its ID.</p>
+                    <button type="button" onClick={() => navigateTo("activity")}>Search Payment</button>
+                  </article>
+                </div>
+              </section>
+
+              <section className="contract-security-strip">
+                <ShieldCheck size={24} aria-hidden="true" />
+                <div>
+                  <strong>Secure & Transparent</strong>
+                  <p>All interactions are performed on Stellar Testnet. You maintain full control of your funds.</p>
+                </div>
+                <a href="https://developers.stellar.org/docs/smart-contracts" target="_blank" rel="noreferrer">
+                  Learn more about contracts <ExternalLink size={15} aria-hidden="true" />
+                </a>
+              </section>
+            </div>
+
+            <aside className="contracts-side">
+              <section className="contract-details-card">
+                <div className="contract-side-heading">
+                  <h2>Contract Details</h2>
+                  <i><Box size={26} aria-hidden="true" /></i>
+                </div>
+                <label>Address</label>
+                <div className="contract-address-copy">
+                  <span>{TRACKER_CONTRACT_ID ? `${TRACKER_CONTRACT_ID.slice(0, 5)}...LUMENPAYTRACKER` : "Not configured"}</span>
+                  <button type="button" onClick={() => void navigator.clipboard.writeText(TRACKER_CONTRACT_ID)} disabled={!TRACKER_CONTRACT_ID} aria-label="Copy contract address">
+                    <Copy size={15} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="contract-meta-list">
+                  <p><span>Network</span><b>Stellar Testnet</b></p>
+                  <p><span>Status</span><b className={CONTRACT_CONFIGURED ? "active" : "inactive"}>{CONTRACT_CONFIGURED ? "Active" : "Not configured"}</b></p>
+                  <p><span>Last Updated</span><strong>{new Date().toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })}</strong></p>
+                </div>
+                <a href={CONTRACT_CONFIGURED ? contractExplorerUrl : "https://stellar.expert/explorer/testnet"} target="_blank" rel="noreferrer">
+                  <ExternalLink size={16} aria-hidden="true" />
+                  View on Stellar Expert
+                </a>
+              </section>
+
+              <section className="contract-recent-card">
+                <div className="contract-recent-heading">
+                  <h2>Recent Contract Activity</h2>
+                  <button type="button" onClick={() => navigateTo("activity")}>View All</button>
+                </div>
+                <div className="contract-recent-list">
+                  {contractEvents.length === 0 ? (
+                    <p className="contract-empty">No contract events yet. Record a payment to populate this panel.</p>
+                  ) : (
+                    contractEvents.slice(0, 4).map((event) => (
+                      <article key={event.id}>
+                        <i><Box size={21} aria-hidden="true" /></i>
+                        <div>
+                          <strong>PaymentRecorded</strong>
+                          <span>From: {shortenPublicKey(event.sender)}</span>
+                          <span>To: {shortenPublicKey(event.recipient)}</span>
+                          <small>Amount: {Number(event.amount).toFixed(2)} XLM</small>
+                        </div>
+                        <b>SUCCESS</b>
+                      </article>
+                    ))
+                  )}
+                </div>
+                <button className="contract-refresh-button" type="button" onClick={refreshContractEvents} disabled={isContractLoading}>
+                  <RefreshCw className={isContractLoading ? "animate-spin" : ""} size={17} aria-hidden="true" />
+                </button>
+              </section>
+            </aside>
+          </section>
+        ) : isAboutPage ? (
+          <section className="about-page" id="about">
+            <div className="about-main">
+              <section className="about-hero">
+                <div className="about-hero-copy">
+                  <h1>About LumenPay Lite</h1>
+                  <p>
+                    LumenPay Lite is a multi-wallet Stellar Testnet payment dApp that lets you send XLM,
+                    record payments on-chain using a smart contract, and follow everything in real-time.
+                  </p>
+                </div>
+                <div className="about-hero-visual" aria-hidden="true">
+                  <span className="about-spark one">*</span>
+                  <span className="about-spark two">*</span>
+                  <span className="about-spark three">*</span>
+                  <div className="about-orb"><span>S</span></div>
+                  <div className="about-podium" />
+                </div>
+              </section>
+
+              <section className="about-section">
+                <h2>What is LumenPay Lite?</h2>
+                <div className="about-feature-grid">
+                  {[
+                    {
+                      title: "Multi-Wallet Support",
+                      text: "Connect with multiple Stellar wallets using StellarWalletsKit and switch anytime.",
+                      icon: WalletCards,
+                      tone: "purple"
+                    },
+                    {
+                      title: "Real-time Activity",
+                      text: "Track live payment events and contract records in a synchronized activity feed.",
+                      icon: Radio,
+                      tone: "blue"
+                    },
+                    {
+                      title: "Smart Contract Powered",
+                      text: "All successful payments are recorded on the LumenPayTracker Soroban smart contract.",
+                      icon: Box,
+                      tone: "green"
+                    },
+                    {
+                      title: "Secure & Transparent",
+                      text: "Built on Stellar. Secure, fast, and transparent payments on the Stellar Testnet.",
+                      icon: ShieldCheck,
+                      tone: "purple"
+                    }
+                  ].map((feature) => {
+                    const Icon = feature.icon;
+                    return (
+                      <article className="about-feature" key={feature.title}>
+                        <i className={feature.tone}><Icon size={24} aria-hidden="true" /></i>
+                        <div>
+                          <strong>{feature.title}</strong>
+                          <p>{feature.text}</p>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="about-section">
+                <h2>Tech Stack</h2>
+                <div className="tech-stack-grid">
+                  {[
+                    ["Stellar SDK", "v11+"],
+                    ["Soroban", "Smart Contracts"],
+                    ["StellarWalletsKit", "Multi-Wallet"],
+                    ["Vue 3", "Frontend"],
+                    ["Vite", "Build Tool"]
+                  ].map(([name, note]) => (
+                    <article key={name}>
+                      <span>{name.slice(0, 1)}</span>
+                      <div>
+                        <strong>{name}</strong>
+                        <small>{note}</small>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section className="about-project-card">
+                <h2>About the Project</h2>
+                <p>
+                  LumenPay Lite was built for the Stellar Quest - Yellow Belt (Level 2) challenge.
+                  It demonstrates real-world integration of Stellar wallets, Soroban smart contracts,
+                  and real-time event handling in a modern dApp experience.
+                </p>
+                <div>
+                  <a href="https://github.com/Gusma-crypto/lumenpay" target="_blank" rel="noreferrer">
+                    <Github size={17} aria-hidden="true" /> View on GitHub <ExternalLink size={14} aria-hidden="true" />
+                  </a>
+                  <a href="https://developers.stellar.org/docs" target="_blank" rel="noreferrer">
+                    Documentation <ExternalLink size={14} aria-hidden="true" />
+                  </a>
+                </div>
+              </section>
+
+              <div className="about-footer-note">
+                <ShieldCheck size={15} aria-hidden="true" />
+                Secure. Transparent. Built on Stellar.
+              </div>
+            </div>
+
+            <aside className="about-side">
+              <section className="about-side-card">
+                <div className="about-side-heading">
+                  <h2>Contract Information</h2>
+                  <i><ClipboardCheck size={22} aria-hidden="true" /></i>
+                </div>
+                <label>Contract Name</label>
+                <strong>LumenPayTracker</strong>
+                <label>Contract Address</label>
+                <div className="about-contract-copy">
+                  <span>{displayedContractId}</span>
+                  <button type="button" onClick={() => void navigator.clipboard.writeText(TRACKER_CONTRACT_ID)} aria-label="Copy contract address">
+                    <Copy size={16} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="about-info-row"><span>Network</span><b>Stellar Testnet</b></div>
+                <div className="about-info-row"><span>Deployed At</span><strong>15 May 2026, 10:24 AM</strong></div>
+                <a href={contractExplorerUrl} target="_blank" rel="noreferrer">
+                  View on Stellar Expert <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              </section>
+
+              <section className="about-side-card">
+                <div className="about-side-heading">
+                  <h2>Version</h2>
+                  <i><Sparkles size={22} aria-hidden="true" /></i>
+                </div>
+                <label>Current Version</label>
+                <strong>2.0.0 (Level 2)</strong>
+                <label>Release Date</label>
+                <strong>May 15, 2026</strong>
+                <a href="https://github.com/Gusma-crypto/lumenpay" target="_blank" rel="noreferrer">
+                  View Changelog <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              </section>
+
+              <section className="about-side-card resources">
+                <div className="about-side-heading">
+                  <h2>Links & Resources</h2>
+                  <i><ExternalLink size={22} aria-hidden="true" /></i>
+                </div>
+                {[
+                  ["Stellar Network", "https://stellar.org"],
+                  ["Soroban Documentation", "https://developers.stellar.org/docs/build/smart-contracts"],
+                  ["Stellar Quest - Yellow Belt", "https://quest.stellar.org"],
+                  ["Join Stellar Community", "https://stellar.org/community"]
+                ].map(([label, href]) => (
+                  <a href={href} target="_blank" rel="noreferrer" key={label}>
+                    {label} <ExternalLink size={14} aria-hidden="true" />
+                  </a>
+                ))}
+              </section>
+            </aside>
+          </section>
+        ) : isSettingsPage ? (
+          <section className="settings-page" id="settings">
+            <div className="settings-main">
+              <div className="settings-page-heading">
+                <h1>Settings</h1>
+                <p>Manage your preferences, network, and application settings.</p>
+              </div>
+
+              <nav className="settings-tabs" aria-label="Settings sections">
+                {["General", "Network", "Appearance", "Notifications", "Advanced"].map((item, index) => (
+                  <button className={index === 0 ? "active" : ""} type="button" key={item}>{item}</button>
+                ))}
+              </nav>
+
+              <section className="settings-panel profile">
+                <h2>Profile & Wallet</h2>
+                <div className="settings-profile-row">
+                  <div className="wallet-avatar-dot" />
+                  <div>
+                    <span>Connected Wallet</span>
+                    <strong>{publicKey ? shortenPublicKey(publicKey) : "No wallet connected"}</strong>
+                    <small>
+                      Public Key: {publicKey ? shortenPublicKey(publicKey) : "Not connected"}
+                      {publicKey ? (
+                        <button type="button" onClick={() => void navigator.clipboard.writeText(publicKey)} aria-label="Copy public key">
+                          <Copy size={15} aria-hidden="true" />
+                        </button>
+                      ) : null}
+                    </small>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void (isConnected ? disconnectWallet() : connectWallet());
+                    }}
+                    className={isConnected ? "danger-outline" : ""}
+                  >
+                    {isConnected ? "Disconnect Wallet" : "Connect Wallet"}
+                  </button>
+                </div>
+              </section>
+
+              <section className="settings-panel">
+                <h2>Application Preferences</h2>
+                <div className="settings-line">
+                  <div>
+                    <strong>Default Explorer</strong>
+                    <p>Choose the default Stellar explorer for transactions.</p>
+                  </div>
+                  <button className="settings-select" type="button">Stellar Expert ˅</button>
+                </div>
+                <div className="settings-line">
+                  <div>
+                    <strong>Auto copy transaction link</strong>
+                    <p>Automatically copy transaction link after success.</p>
+                  </div>
+                  <button
+                    className={`settings-toggle ${autoCopyTransactionLink ? "on" : ""}`}
+                    type="button"
+                    onClick={() => setAutoCopyTransactionLink((current) => !current)}
+                    aria-pressed={autoCopyTransactionLink}
+                  />
+                </div>
+                <div className="settings-line">
+                  <div>
+                    <strong>Auto record to contract</strong>
+                    <p>Automatically record successful payments to the contract.</p>
+                  </div>
+                  <button
+                    className={`settings-toggle ${autoRecordContract ? "on" : ""}`}
+                    type="button"
+                    onClick={() => setAutoRecordContract((current) => !current)}
+                    aria-pressed={autoRecordContract}
+                  />
+                </div>
+              </section>
+
+              <section className="settings-panel">
+                <h2>Display & Appearance</h2>
+                <div className="settings-line appearance">
+                  <div>
+                    <strong>Theme</strong>
+                    <p>Choose your preferred theme.</p>
+                  </div>
+                  <div className="theme-choice-group">
+                    <button className={theme === "light" ? "active" : ""} type="button" onClick={() => setTheme("light")}>
+                      <Sun size={17} aria-hidden="true" /> Light
+                    </button>
+                    <button className={theme === "dark" ? "active" : ""} type="button" onClick={() => setTheme("dark")}>
+                      <Moon size={17} aria-hidden="true" /> Dark
+                    </button>
+                    <button type="button" onClick={() => setTheme("light")}>
+                      <Monitor size={17} aria-hidden="true" /> System
+                    </button>
+                  </div>
+                </div>
+                <div className="settings-line">
+                  <div>
+                    <strong>Compact mode</strong>
+                    <p>Show more content in less space.</p>
+                  </div>
+                  <button
+                    className={`settings-toggle ${compactMode ? "on" : ""}`}
+                    type="button"
+                    onClick={() => setCompactMode((current) => !current)}
+                    aria-pressed={compactMode}
+                  />
+                </div>
+              </section>
+
+              <section className="settings-panel">
+                <h2>Security & Privacy</h2>
+                <div className="settings-line">
+                  <div>
+                    <strong>Confirm transactions</strong>
+                    <p>Always show confirmation before sending transactions.</p>
+                  </div>
+                  <button
+                    className={`settings-toggle ${confirmTransactions ? "on" : ""}`}
+                    type="button"
+                    onClick={() => setConfirmTransactions((current) => !current)}
+                    aria-pressed={confirmTransactions}
+                  />
+                </div>
+                <div className="settings-line">
+                  <div>
+                    <strong>Clear local data</strong>
+                    <p>Remove all locally stored data from this browser.</p>
+                  </div>
+                  <button
+                    className="clear-data-button"
+                    type="button"
+                    onClick={() => {
+                      localStorage.clear();
+                      void disconnectWallet();
+                      showNotification("form", "Local Data Cleared", "Browser storage untuk LumenPay Lite sudah dibersihkan.");
+                    }}
+                  >
+                    Clear Data
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <aside className="settings-side">
+              <section className="settings-side-card network">
+                <h2>Network</h2>
+                <div className="settings-side-row">
+                  <i><Coins size={23} aria-hidden="true" /></i>
+                  <div>
+                    <strong>Stellar Testnet <b>Active</b></strong>
+                    <p>All transactions and contracts interact with the Stellar Testnet.</p>
+                  </div>
+                </div>
+                <button type="button" onClick={refreshFreighterNetwork}>Change Network</button>
+              </section>
+
+              <section className="settings-side-card about">
+                <h2>About LumenPay Lite</h2>
+                <div className="settings-side-row">
+                  <i><Sparkles size={23} aria-hidden="true" /></i>
+                  <div>
+                    <strong>Version <span>2.0.0 (Level 2)</span></strong>
+                    <p>A lightweight Stellar payment dApp built for the Yellow Belt Challenge.</p>
+                    <a href="https://github.com/Gusma-crypto/lumenpay" target="_blank" rel="noreferrer">View Changelog <ExternalLink size={14} aria-hidden="true" /></a>
+                  </div>
+                </div>
+              </section>
+
+              <section className="settings-side-card tips">
+                <h2>Tips</h2>
+                {["Never share your secret key or recovery phrase.", "Always double-check recipient addresses.", "Use Testnet for testing only."].map((item) => (
+                  <p key={item}><CheckCircle2 size={18} aria-hidden="true" /> {item}</p>
+                ))}
+                <a href="https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/accounts" target="_blank" rel="noreferrer">
+                  Security Best Practices <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              </section>
+
+              <section className="settings-side-card help">
+                <div className="settings-side-row">
+                  <i><Headphones size={23} aria-hidden="true" /></i>
+                  <div>
+                    <h2>Need Help?</h2>
+                    <p>Check our documentation or join the Stellar community.</p>
+                  </div>
+                </div>
+                <a href="https://developers.stellar.org/docs" target="_blank" rel="noreferrer">
+                  View Documentation <ExternalLink size={14} aria-hidden="true" />
+                </a>
+              </section>
+            </aside>
+          </section>
+        ) : (
+        <>
         <section className="dashboard-hero" id="dashboard">
           <div className="hero-copy">
             <h1>Welcome to <em>LumenPay Lite</em></h1>
@@ -611,46 +1717,8 @@ export default function Home() {
         </section>
 
         <div className="dashboard-footer"><span><ShieldCheck size={14} /> Secure. Transparent. Built on Stellar.</span><span>© 2026 LumenPay Lite. All rights reserved.</span></div>
-
-        {activeSection === "send-payment" || activeSection === "activity" ? (
-        <section className="dashboard-grid feature-workspace">
-          <div id="send-payment" className="dashboard-panel send-panel">
-            <PaymentForm
-              isConnected={isConnected}
-              isSubmitting={isSubmitting}
-              latestTransactionHash={recentTransaction?.hash ?? null}
-              onSendPayment={reviewPayment}
-              onEdit={() => setTransactionResult({ status: "idle" })}
-              recipientSuggestion={recipientSuggestion}
-            />
-          </div>
-          <div className="dashboard-panel status-panel">
-            <h2>Transaction Status</h2>
-            <p className="panel-subtitle">Follow payment and contract confirmation.</p>
-            <TransactionStatus result={transactionResult} />
-            <div className={`contract-status-row status-${contractStatus}`} id="contracts">
-              <div className="status-icon"><Coins size={19} /></div>
-              <div><strong>Contract Record</strong><span>LumenPayTracker · record_payment</span></div>
-              <b>{contractStatus === "idle" ? "READY" : contractStatus.toUpperCase()}</b>
-            </div>
-            {contractHash ? (
-              <a className="explorer-wide" href={getTestnetExplorerUrl(contractHash)} target="_blank" rel="noreferrer">
-                View on Stellar Expert <ExternalLink size={15} />
-              </a>
-            ) : null}
-          </div>
-          <div id="activity" className="dashboard-panel activity-panel">
-            <LiveContractActivity
-              events={contractEvents}
-              isLoading={isContractLoading}
-              error={contractError}
-              callStatus={contractStatus}
-              callHash={contractHash}
-              onRefresh={refreshContractEvents}
-            />
-          </div>
-        </section>
-        ) : null}
+        </>
+        )}
 
       </div>
 
@@ -669,36 +1737,9 @@ export default function Home() {
               onDisconnect={disconnectWallet}
               wallets={wallets}
               walletName={walletName}
+              connectedWalletId={connectedWalletId}
             />
           </div>
-        </div>
-      ) : null}
-
-      {isSettingsOpen ? (
-        <div className="wallet-modal-backdrop">
-          <section className="settings-modal-card">
-            <button className="wallet-modal-close" type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close settings">
-              <X size={19} />
-            </button>
-            <p className="section-eyebrow">Preferences</p>
-            <h2>Dashboard Settings</h2>
-            <p>Choose the visual theme and review the active Stellar network.</p>
-            <div className="settings-network-row">
-              <span>Network</span>
-              <strong><i /> Stellar Testnet</strong>
-            </div>
-            <div className="settings-theme-grid">
-              <button className={theme === "light" ? "active" : ""} type="button" onClick={() => setTheme("light")}>
-                Light dashboard
-              </button>
-              <button className={theme === "dark" ? "active" : ""} type="button" onClick={() => setTheme("dark")}>
-                Dark dashboard
-              </button>
-            </div>
-            <button className="primary-action settings-done" type="button" onClick={() => setIsSettingsOpen(false)}>
-              Save preferences
-            </button>
-          </section>
         </div>
       ) : null}
 

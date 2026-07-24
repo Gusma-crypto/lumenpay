@@ -60,6 +60,19 @@ export async function connectWallet(walletId: string) {
   return { address, network, walletId, walletName: selected?.name ?? walletId };
 }
 
+export async function restoreWallet(walletId: string) {
+  const kit = ensureWalletKit();
+  kit.setWallet(walletId);
+  const selected = (await kit.refreshSupportedWallets()).find((wallet) => wallet.id === walletId);
+
+  if (selected && !selected.isAvailable) {
+    throw new Error(`${selected.name} was not found. Install or open the wallet, then try again.`);
+  }
+
+  const network = await kit.getNetwork();
+  return { network, walletId, walletName: selected?.name ?? walletId };
+}
+
 export async function getWalletNetwork() {
   return ensureWalletKit().getNetwork();
 }

@@ -31,37 +31,32 @@ export function TransactionStatus(props: TransactionStatusProps) {
   const isSuccess = result.status === "success";
   const isError = result.status === "error";
   const Icon = isSuccess ? CheckCircle2 : isError ? AlertCircle : Clock;
+  const statusClass = isSuccess ? "success" : isError ? "error" : "pending";
+  const statusTitle =
+    result.status === "signing"
+      ? "Pending..."
+      : result.status === "submitting"
+        ? "Submitting..."
+        : isSuccess
+          ? "Success"
+          : "Failed";
 
   return (
-    <section
-      className={`rounded-lg border p-5 shadow-panel ring-1 ring-cyan-300/10 ${
-        isSuccess
-          ? "border-cyan-300/50 bg-cyan-950/35"
-          : isError
-            ? "border-red-400/50 bg-red-950/35"
-            : "border-violet-300/50 bg-violet-950/35"
-      }`}
-    >
+    <section className={`transaction-status-card ${statusClass}`}>
       <div className="flex items-start gap-3">
-        <div
-          className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg ${
-            isSuccess ? "bg-cyan-400/15 text-cyan-300" : isError ? "bg-red-400/15 text-red-200" : "bg-violet-400/15 text-violet-200"
-          }`}
-        >
+        <div className="transaction-status-icon">
           <Icon size={22} aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <p className="font-semibold text-ink">
-            {isSuccess ? "Transaction Successful" : isError ? "Transaction Failed" : "Transaction Pending"}
-          </p>
-          {result.message ? <p className="mt-1 text-sm leading-6 text-violet-100/75">{result.message}</p> : null}
+          <p className="transaction-status-title">{statusTitle}</p>
+          {result.message ? <p className="transaction-status-message">{result.message}</p> : null}
           {result.hash ? (
-            <div className="mt-3 space-y-2">
-              <p className="rounded-lg border border-line/55 bg-[#090a18]/75 p-3 break-all font-mono text-sm text-cyan-100">
+            <div className="transaction-status-links">
+              <p className="transaction-hash">
                 {result.hash}
               </p>
               <a
-                className="inline-flex text-sm font-semibold text-brand underline-offset-4 hover:underline"
+                className="transaction-explorer-link"
                 href={getTestnetExplorerUrl(result.hash)}
                 target="_blank"
                 rel="noreferrer"

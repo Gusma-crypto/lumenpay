@@ -2,8 +2,6 @@
 
 import {
   Activity,
-  Award,
-  BookOpen,
   Boxes,
   CircleUserRound,
   Info,
@@ -11,7 +9,6 @@ import {
   MoreVertical,
   Send,
   Settings,
-  Sparkles,
   WalletCards,
   X
 } from "lucide-react";
@@ -42,7 +39,7 @@ export function AppSidebar({ activeSection, isOpen, onClose, onNavigate, publicK
       {isOpen ? <button className="sidebar-backdrop" type="button" onClick={onClose} aria-label="Close menu" /> : null}
       <aside className={`app-sidebar ${isOpen ? "is-open" : ""}`}>
         <div className="sidebar-brand">
-          <span className="brand-mark"><Sparkles size={27} /></span>
+          <img className="brand-logo" src="/logo.png" alt="LumenPay logo" />
           <span>LumenPay</span>
           <small>Lite</small>
           <button className="sidebar-close" type="button" onClick={onClose} aria-label="Close menu">
@@ -69,19 +66,6 @@ export function AppSidebar({ activeSection, isOpen, onClose, onNavigate, publicK
             );
           })}
         </nav>
-
-        <div className="belt-card">
-          <div className="belt-medal"><Award size={25} /></div>
-          <div>
-            <strong>Level 2</strong>
-            <span>Yellow Belt</span>
-          </div>
-          <p>Build. Ship. On Stellar.</p>
-          <a href="https://github.com/Gusma-crypto/lumenpay/blob/main/YELLOW_BELT_STEP_BY_STEP.md" target="_blank" rel="noreferrer">
-            <BookOpen size={15} />
-            View Guide
-          </a>
-        </div>
 
         <button className="sidebar-account-card" type="button" onClick={() => onNavigate("wallets")}>
             <CircleUserRound size={33} />

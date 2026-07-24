@@ -1,16 +1,29 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { ArrowRight, BadgeDollarSign, MessageSquareText, QrCode, Send, UserRound, X } from "lucide-react";
-import { getTestnetExplorerUrl } from "@/lib/explorer";
+import {
+  ArrowRight,
+  BadgeDollarSign,
+  CheckCircle2,
+  ClipboardPaste,
+  Info,
+  MessageSquareText,
+  QrCode,
+  RotateCcw,
+  Send,
+  UserRound,
+  X
+} from "lucide-react";
+import { validateAmount, validateRecipientAddress } from "@/lib/validation";
 
 type PaymentFormProps = {
   isConnected: boolean;
   isSubmitting: boolean;
-  latestTransactionHash: string | null;
+  balance: string | null;
   onSendPayment: (destinationPublicKey: string, amount: string, memo: string) => Promise<void>;
   onEdit: () => void;
   recipientSuggestion: string | null;
+  resetSignal: number;
 };
 
 type DetectedBarcode = {
@@ -56,10 +69,17 @@ export function PaymentForm(props: PaymentFormProps) {
   const [memo, setMemo] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [pasteError, setPasteError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const onEditRef = useRef(props.onEdit);
   const invalidQrRef = useRef(false);
   const canSendPayment = props.isConnected && !props.isSubmitting && destination.trim().length > 0 && amount.trim().length > 0;
+  const recipientError = destination.trim() ? validateRecipientAddress(destination) : null;
+  const amountError = amount.trim() ? validateAmount(amount, props.balance) : null;
+  const isRecipientValid = destination.trim().length > 0 && !recipientError;
+  const isAmountValid = amount.trim().length > 0 && !amountError;
+  const isMemoValid = new TextEncoder().encode(memo.trim()).length <= 28;
+  const quickAmounts = ["1", "5", "10", "50", "100"];
 
   useEffect(() => {
     onEditRef.current = props.onEdit;
@@ -71,6 +91,19 @@ export function PaymentForm(props: PaymentFormProps) {
       onEditRef.current();
     }
   }, [props.recipientSuggestion]);
+
+  useEffect(() => {
+    if (props.resetSignal === 0) {
+      return;
+    }
+
+    setDestination("");
+    setAmount("");
+    setMemo("");
+    setPasteError(null);
+    setScanError(null);
+    setIsScannerOpen(false);
+  }, [props.resetSignal]);
 
   useEffect(() => {
     if (!isScannerOpen) {
@@ -148,9 +181,6 @@ export function PaymentForm(props: PaymentFormProps) {
       isActive = false;
       window.cancelAnimationFrame(animationFrame);
       stream?.getTracks().forEach((track) => track.stop());
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
     };
   }, [isScannerOpen]);
 
@@ -159,53 +189,69 @@ export function PaymentForm(props: PaymentFormProps) {
     await props.onSendPayment(destination.trim(), amount.trim(), memo.trim());
   }
 
+  async function pasteRecipient() {
+    try {
+      setPasteError(null);
+      const value = await navigator.clipboard.readText();
+      const address = readStellarAddress(value) || value.trim();
+      setDestination(address);
+      props.onEdit();
+    } catch {
+      setPasteError("Clipboard access was blocked. Paste the address manually.");
+    }
+  }
+
+  function resetForm() {
+    setDestination("");
+    setAmount("");
+    setMemo("");
+    setPasteError(null);
+    setScanError(null);
+    props.onEdit();
+  }
+
   return (
-    <section className="panel-card-strong">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <p className="section-eyebrow">Payment</p>
-          <h2 className="text-xl font-semibold text-ink">Send XLM Payment</h2>
+    <section className="send-form-card">
+      <div className="send-card-heading">
+        <div className="send-card-icon">
+          <Send size={25} aria-hidden="true" />
         </div>
-        {props.latestTransactionHash ? (
-          <a
-            className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-violet-400/10 text-amber transition hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-[#151633] hover:text-cyan-200"
-            href={getTestnetExplorerUrl(props.latestTransactionHash)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Open latest payment transaction"
-            title="Open latest payment transaction"
-          >
-            <Send size={21} aria-hidden="true" />
-          </a>
-        ) : (
-          <div className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-violet-400/10 text-amber">
-            <Send size={21} aria-hidden="true" />
-          </div>
-        )}
+        <div>
+          <h2>Payment Details</h2>
+          <p>Fill in the recipient address and amount to send.</p>
+        </div>
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <label className="block">
-          <span className="form-label">Recipient Stellar Address</span>
-          <div className="relative">
+      <form className="send-payment-form" onSubmit={handleSubmit}>
+        <label className="send-field">
+          <span>
+            Recipient Address <b>*</b>
+            <button className="paste-button" type="button" onClick={() => void pasteRecipient()} disabled={!props.isConnected || props.isSubmitting}>
+              <ClipboardPaste size={15} aria-hidden="true" />
+              Paste
+            </button>
+          </span>
+          <div className={`send-input-wrap ${isRecipientValid ? "valid" : ""}`}>
             <UserRound
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-violet-200/55"
+              className="send-input-icon"
               size={18}
               aria-hidden="true"
             />
             <input
-              className="form-input pl-10 pr-12 font-mono text-sm"
+              className="send-input mono"
               value={destination}
               onChange={(event) => {
                 setDestination(event.target.value);
+                setPasteError(null);
                 props.onEdit();
               }}
               placeholder="G..."
               disabled={!props.isConnected || props.isSubmitting}
               required
             />
+            {isRecipientValid ? <CheckCircle2 className="send-valid-icon" size={20} aria-hidden="true" /> : null}
             <button
-              className="icon-button absolute right-1 top-1/2 h-10 w-10 -translate-y-1/2"
+              className="scan-button"
               type="button"
               onClick={() => setIsScannerOpen(true)}
               disabled={!props.isConnected || props.isSubmitting}
@@ -215,73 +261,89 @@ export function PaymentForm(props: PaymentFormProps) {
               <QrCode size={17} aria-hidden="true" />
             </button>
           </div>
+          <small className={recipientError || pasteError ? "field-error" : "field-help"}>
+            {recipientError ?? pasteError ?? (isRecipientValid ? "Valid Stellar address format" : "Paste or scan a Stellar Testnet recipient address.")}
+          </small>
         </label>
 
-        <label className="block">
-          <span className="form-label">Memo optional</span>
-          <div className="relative">
-            <MessageSquareText
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-violet-200/55"
-              size={18}
-              aria-hidden="true"
-            />
+        <label className="send-field">
+          <span>
+            Amount (XLM) <b>*</b>
+            <em>Balance: {props.balance ? `${Number(props.balance).toFixed(4)} XLM` : "Connect wallet"}</em>
+          </span>
+          <div className={`send-input-wrap amount ${isAmountValid ? "valid" : ""}`}>
+            <BadgeDollarSign className="send-input-icon" size={18} aria-hidden="true" />
             <input
-              className="form-input pl-10"
-              value={memo}
-              onChange={(event) => {
-                setMemo(event.target.value.slice(0, 28));
-                props.onEdit();
-              }}
-              placeholder="Invoice, payroll, note..."
-              disabled={!props.isConnected || props.isSubmitting}
-              maxLength={28}
-            />
-          </div>
-        </label>
-
-        <label className="block">
-          <span className="form-label">Amount XLM</span>
-          <div className="relative">
-            <BadgeDollarSign
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-violet-200/55"
-              size={18}
-              aria-hidden="true"
-            />
-            <input
-              className="form-input pl-10"
+              className="send-input"
               value={amount}
               onChange={(event) => {
                 setAmount(event.target.value);
                 props.onEdit();
               }}
               inputMode="decimal"
-              placeholder="10"
+              placeholder="10.5"
               disabled={!props.isConnected || props.isSubmitting}
               required
             />
+            <strong>XLM</strong>
           </div>
+          <div className="quick-amounts">
+            {quickAmounts.map((quickAmount) => (
+              <button
+                className={amount === quickAmount ? "active" : ""}
+                type="button"
+                key={quickAmount}
+                onClick={() => {
+                  setAmount(quickAmount);
+                  props.onEdit();
+                }}
+                disabled={!props.isConnected || props.isSubmitting}
+              >
+                {quickAmount}
+              </button>
+            ))}
+          </div>
+          {amountError ? <small className="field-error">{amountError}</small> : null}
         </label>
 
-        <div className="rounded-lg border border-line/55 bg-paper p-3">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="font-medium text-violet-200/70">Network</span>
-            <span className="font-semibold text-ink">Stellar Testnet</span>
+        <label className="send-field">
+          <span>
+            Memo (Optional) <Info size={15} aria-hidden="true" />
+            <em>{new TextEncoder().encode(memo.trim()).length}/28</em>
+          </span>
+          <div className={`send-textarea-wrap ${memo.trim() && isMemoValid ? "valid" : ""}`}>
+            <MessageSquareText className="send-input-icon top" size={18} aria-hidden="true" />
+            <textarea
+              className="send-textarea"
+              value={memo}
+              onChange={(event) => {
+                setMemo(event.target.value);
+                props.onEdit();
+              }}
+              placeholder="Test payment - LumenPay Lite"
+              disabled={!props.isConnected || props.isSubmitting}
+              maxLength={28}
+            />
+            {memo.trim() && isMemoValid ? <CheckCircle2 className="send-valid-icon textarea" size={20} aria-hidden="true" /> : null}
           </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-            <span className="font-medium text-violet-200/70">Asset</span>
-            <span className="font-semibold text-ink">Native XLM</span>
-          </div>
+          {!isMemoValid ? <small className="field-error">Memo can use up to 28 bytes.</small> : null}
+        </label>
+
+        <div className="send-note">
+          <Info size={18} aria-hidden="true" />
+          <p>This payment will be sent on Stellar Testnet and can be recorded to LumenPay Tracker contract after successful transaction.</p>
         </div>
 
-        <button
-          className="button-primary w-full justify-center"
-          type="submit"
-          disabled={!canSendPayment}
-        >
-          <Send size={18} aria-hidden="true" />
-          {props.isSubmitting ? "Processing Payment" : "Send Payment"}
-          <ArrowRight size={18} aria-hidden="true" />
-        </button>
+        <div className="send-actions">
+          <button className="reset-payment-button" type="button" onClick={resetForm} disabled={props.isSubmitting}>
+            <RotateCcw size={19} aria-hidden="true" />
+            Reset
+          </button>
+          <button className="review-payment-button" type="submit" disabled={!canSendPayment}>
+            {props.isSubmitting ? "Processing Payment" : "Review Payment"}
+            <ArrowRight size={19} aria-hidden="true" />
+          </button>
+        </div>
       </form>
 
       {isScannerOpen ? (
