@@ -10,8 +10,25 @@ import { PaymentForm } from "@/components/PaymentForm";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import { TransactionStatus } from "@/components/TransactionStatus";
 import { WalletPanel } from "@/components/WalletPanel";
+import { LiveContractActivity } from "@/components/LiveContractActivity";
 import { getTestnetExplorerUrl } from "@/lib/explorer";
-import { getFreighterNetworkDetails, isFreighterAvailable, requestFreighterPublicKey, signWithFreighter } from "@/lib/freighter";
+import {
+  connectWallet as connectSelectedWallet,
+  disconnectWallet as disconnectActiveWallet,
+  getWalletErrorMessage,
+  getWalletNetwork,
+  listWallets,
+  signWithWallet,
+  WalletOption
+} from "@/lib/wallets";
+import {
+  buildRecordPaymentTransaction,
+  CONTRACT_CONFIGURED,
+  ContractCallStatus,
+  ContractPaymentEvent,
+  fetchPaymentEvents,
+  submitContractTransaction
+} from "@/lib/contract";
 import {
   buildXlmPaymentTransaction,
   ESTIMATED_FEE_XLM,
@@ -100,6 +117,13 @@ export default function Home() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [recipientSuggestion, setRecipientSuggestion] = useState<string | null>(null);
   const [notification, setNotification] = useState<AppNotification | null>(null);
+  const [wallets, setWallets] = useState<WalletOption[]>([]);
+  const [walletName, setWalletName] = useState<string | null>(null);
+  const [contractEvents, setContractEvents] = useState<ContractPaymentEvent[]>([]);
+  const [contractError, setContractError] = useState<string | null>(null);
+  const [contractStatus, setContractStatus] = useState<ContractCallStatus>("idle");
+  const [contractHash, setContractHash] = useState<string | null>(null);
+  const [isContractLoading, setIsContractLoading] = useState(false);
 
   const isConnected = walletStatus === "connected" && Boolean(publicKey);
   const isSubmitting = transactionResult.status === "signing" || transactionResult.status === "submitting";
@@ -178,34 +202,63 @@ export default function Home() {
     void refreshPaymentHistory();
   }, [refreshPaymentHistory]);
 
-  async function connectWallet() {
+  useEffect(() => {
+    void listWallets().then(setWallets).catch(() => setWallets([]));
+  }, []);
+
+  const refreshContractEvents = useCallback(async () => {
+    if (!CONTRACT_CONFIGURED) {
+      setContractEvents([]);
+      setContractStatus("skipped");
+      return;
+    }
+
+    setIsContractLoading(true);
+    try {
+      setContractEvents(await fetchPaymentEvents());
+      setContractError(null);
+    } catch (error) {
+      setContractError(error instanceof Error ? error.message : "Unable to synchronize contract events.");
+    } finally {
+      setIsContractLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshContractEvents();
+    const interval = window.setInterval(() => void refreshContractEvents(), 6_000);
+    return () => window.clearInterval(interval);
+  }, [refreshContractEvents]);
+
+  async function connectWallet(walletId?: string) {
+    if (!walletId) {
+      setWalletError("Choose one of the available wallets below.");
+      return;
+    }
     setWalletStatus("connecting");
     setWalletError(null);
 
     try {
-      const available = await isFreighterAvailable();
-      if (!available) {
-        throw new Error("Freighter wallet is not available. Install Freighter and switch to Testnet.");
-      }
+      const connection = await connectSelectedWallet(walletId);
 
-      const walletPublicKey = await requestFreighterPublicKey();
-      const networkDetails = await getFreighterNetworkDetails();
-
-      setPublicKey(walletPublicKey);
-      setFreighterNetwork(networkDetails.network);
-      setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
+      setPublicKey(connection.address);
+      setWalletName(connection.walletName);
+      setFreighterNetwork(connection.network.network);
+      setFreighterNetworkPassphrase(connection.network.networkPassphrase);
       setWalletStatus("connected");
     } catch (error) {
       setPublicKey(null);
       setFreighterNetwork(null);
       setFreighterNetworkPassphrase(null);
       setWalletStatus("error");
-      setWalletError(error instanceof Error ? error.message : "Failed to connect wallet.");
+      setWalletError(getWalletErrorMessage(error));
     }
   }
 
-  function disconnectWallet() {
+  async function disconnectWallet() {
+    await disconnectActiveWallet().catch(() => undefined);
     setPublicKey(null);
+    setWalletName(null);
     setFreighterNetwork(null);
     setFreighterNetworkPassphrase(null);
     setWalletStatus("disconnected");
@@ -220,12 +273,12 @@ export default function Home() {
 
   async function refreshFreighterNetwork() {
     try {
-      const networkDetails = await getFreighterNetworkDetails();
+      const networkDetails = await getWalletNetwork();
       setFreighterNetwork(networkDetails.network);
       setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
 
       if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
-        setTransactionResult({ status: "error", message: "Switch Freighter to Testnet." });
+        setTransactionResult({ status: "error", message: "Switch the connected wallet to Testnet." });
         return;
       }
 
@@ -233,25 +286,25 @@ export default function Home() {
     } catch (error) {
       setTransactionResult({
         status: "error",
-        message: error instanceof Error ? error.message : "Unable to read Freighter network."
+        message: getWalletErrorMessage(error)
       });
     }
   }
 
   async function reviewPayment(destinationPublicKey: string, amount: string, memo: string) {
     if (!publicKey) {
-      setTransactionResult({ status: "error", message: "Connect your Freighter wallet first." });
+      setTransactionResult({ status: "error", message: "Connect a Stellar wallet first." });
       return;
     }
 
-    const networkDetails = await getFreighterNetworkDetails();
+    const networkDetails = await getWalletNetwork();
     setFreighterNetwork(networkDetails.network);
     setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
 
     if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
       setTransactionResult({
         status: "error",
-        message: "Switch Freighter to Testnet."
+        message: "Switch the connected wallet to Testnet."
       });
       return;
     }
@@ -284,16 +337,16 @@ export default function Home() {
 
   async function sendPayment(destinationPublicKey: string, amount: string, memo: string) {
     if (!publicKey) {
-      setTransactionResult({ status: "error", message: "Connect your Freighter wallet first." });
+      setTransactionResult({ status: "error", message: "Connect a Stellar wallet first." });
       return;
     }
 
-    const networkDetails = await getFreighterNetworkDetails();
+    const networkDetails = await getWalletNetwork();
     setFreighterNetwork(networkDetails.network);
     setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
 
     if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
-      setTransactionResult({ status: "error", message: "Switch Freighter to Testnet." });
+      setTransactionResult({ status: "error", message: "Switch the connected wallet to Testnet." });
       return;
     }
 
@@ -303,7 +356,7 @@ export default function Home() {
     }
 
     try {
-      setTransactionResult({ status: "signing", message: "Waiting for Freighter approval..." });
+      setTransactionResult({ status: "signing", message: `Waiting for ${walletName ?? "wallet"} approval...` });
 
       const transaction = await buildXlmPaymentTransaction({
         sourcePublicKey: publicKey,
@@ -312,7 +365,7 @@ export default function Home() {
         memo
       });
 
-      const signedXdr = await signWithFreighter(transaction.toXDR(), publicKey);
+      const signedXdr = await signWithWallet(transaction.toXDR(), publicKey);
 
       setTransactionResult({ status: "submitting", message: "Submitting transaction to Stellar Testnet..." });
 
@@ -332,10 +385,33 @@ export default function Home() {
 
       await refreshBalance();
       await refreshPaymentHistory();
+
+      if (CONTRACT_CONFIGURED) {
+        try {
+          setContractStatus("pending");
+          setContractError(null);
+          const contractTransaction = await buildRecordPaymentTransaction({
+            source: publicKey,
+            recipient: destinationPublicKey,
+            amount,
+            paymentHash: response.hash
+          });
+          const signedContractXdr = await signWithWallet(contractTransaction.toXDR(), publicKey);
+          const contractResponse = await submitContractTransaction(signedContractXdr);
+          setContractHash(contractResponse.hash);
+          setContractStatus("success");
+          await refreshContractEvents();
+        } catch (contractCallError) {
+          setContractStatus("failed");
+          setContractError(getWalletErrorMessage(contractCallError));
+        }
+      } else {
+        setContractStatus("skipped");
+      }
     } catch (error) {
       setTransactionResult({
         status: "error",
-        message: getStellarErrorMessage(error)
+        message: getStellarErrorMessage(error, getWalletErrorMessage(error))
       });
     }
   }
@@ -359,7 +435,7 @@ export default function Home() {
             <p className="section-eyebrow">Step 1</p>
             <h2 className="mt-1 text-lg font-semibold text-ink">Connect and check balance</h2>
             <p className="mt-2 text-sm leading-6 text-violet-100/70">
-              Start with Freighter on Stellar Testnet, then confirm your available XLM.
+              Choose a supported Stellar wallet on Testnet, then confirm your available XLM.
             </p>
           </div>
           <WalletPanel
@@ -371,6 +447,8 @@ export default function Home() {
             onRefreshNetwork={refreshFreighterNetwork}
             onConnect={connectWallet}
             onDisconnect={disconnectWallet}
+            wallets={wallets}
+            walletName={walletName}
           />
           <BalanceCard
             balance={balance}
@@ -441,6 +519,14 @@ export default function Home() {
             error={historyError}
             isConnected={isConnected}
             onRefresh={refreshPaymentHistory}
+          />
+          <LiveContractActivity
+            events={contractEvents}
+            isLoading={isContractLoading}
+            error={contractError}
+            callStatus={contractStatus}
+            callHash={contractHash}
+            onRefresh={refreshContractEvents}
           />
         </div>
       </section>

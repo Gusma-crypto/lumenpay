@@ -30,7 +30,7 @@ export function AppHeader(props: AppHeaderProps) {
         <div className="flex flex-col gap-3 text-sm text-cyan-100 sm:flex-row sm:items-center">
           <div className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-[#111226]/85 px-3 py-2 shadow-sm">
             <ShieldCheck size={17} aria-hidden="true" className="text-mint" />
-            Freighter-ready
+            Multi-wallet
           </div>
           <div className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-[#111226]/85 px-3 py-2 shadow-sm">
             <Sparkles size={17} aria-hidden="true" className="text-amber" />
@@ -54,7 +54,7 @@ export function AppHeader(props: AppHeaderProps) {
               disabled={isConnecting}
             >
               <Plug size={17} aria-hidden="true" />
-              {isConnecting ? "Connecting" : "Connect"}
+              {isConnecting ? "Connecting" : "Choose wallet"}
             </button>
           )}
           <button className="icon-button" type="button" onClick={props.onToggleTheme} aria-label="Toggle theme" title="Toggle theme">

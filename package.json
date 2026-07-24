@@ -2,7 +2,7 @@
   "name": "lumenpay-stellar",
   "version": "0.1.0",
   "private": true,
-  "description": "LumenPay Lite - a Stellar Testnet payment dApp for White Belt Level 1.",
+  "description": "LumenPay Lite - a multi-wallet Stellar Testnet payment tracker for Yellow Belt Level 2.",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "^2.5.0",
     "@stellar/freighter-api": "^4.1.0",
     "@stellar/stellar-sdk": "^13.3.0",
     "lucide-react": "^0.468.0",

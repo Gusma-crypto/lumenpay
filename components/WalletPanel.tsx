@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, Copy, LogOut, QrCode, RefreshCw, Wallet, WifiOff, X } from "lucide-react";
 import { useState } from "react";
 import { shortenPublicKey } from "@/lib/explorer";
+import type { WalletOption } from "@/lib/wallets";
 
 type WalletStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -13,8 +14,10 @@ type WalletPanelProps = {
   networkName: string | null;
   isTestnet: boolean;
   onRefreshNetwork: () => void;
-  onConnect: () => void;
+  onConnect: (walletId?: string) => void;
   onDisconnect: () => void;
+  wallets: WalletOption[];
+  walletName: string | null;
 };
 
 export function WalletPanel(props: WalletPanelProps) {
@@ -30,9 +33,9 @@ export function WalletPanel(props: WalletPanelProps) {
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
           <p className="section-eyebrow">Wallet</p>
-          <h2 className="text-xl font-semibold text-ink">Freighter Connection</h2>
+          <h2 className="text-xl font-semibold text-ink">Multi-wallet Connection</h2>
           <p className="mt-2 max-w-md text-sm leading-6 text-violet-100/70">
-            Connect Freighter, confirm Testnet, then use this wallet to send XLM.
+            Connect with StellarWalletsKit, confirm Testnet, then use your preferred wallet to send XLM.
           </p>
         </div>
         <div className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-cyan-400/10 text-cyan-300 shadow-sm">
@@ -43,7 +46,7 @@ export function WalletPanel(props: WalletPanelProps) {
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
           <p className="text-xs font-semibold uppercase text-violet-200/55">Wallet Security</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-100">Freighter signed</p>
+          <p className="mt-1 text-sm font-semibold text-cyan-100">{props.walletName ?? "Wallet signed"}</p>
         </div>
         <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
           <p className="text-xs font-semibold uppercase text-violet-200/55">Network Status</p>
@@ -100,9 +103,41 @@ export function WalletPanel(props: WalletPanelProps) {
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-violet-100/70">Connect a Freighter wallet on Testnet.</p>
+          <p className="mt-2 text-sm text-violet-100/70">Choose a Stellar wallet on Testnet.</p>
         )}
       </div>
+
+      {!isConnected ? (
+        <div className="mb-5">
+          <p className="mb-3 text-sm font-semibold text-cyan-100">Available wallet options</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {props.wallets.slice(0, 8).map((wallet) => (
+              <button
+                key={wallet.id}
+                className="flex min-h-14 items-center gap-3 rounded-lg border border-line/55 bg-[#090a18] p-3 text-left transition hover:border-cyan-300 hover:bg-[#11132a] disabled:hover:border-line/55"
+                type="button"
+                onClick={() => props.onConnect(wallet.id)}
+                disabled={isConnecting}
+                title={wallet.isAvailable ? `Connect ${wallet.name}` : `${wallet.name} is not detected`}
+              >
+                <img className="h-8 w-8 rounded-md" src={wallet.icon} alt="" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-ink">{wallet.name}</span>
+                  <span className={`block text-xs ${wallet.isAvailable ? "text-cyan-300" : "text-violet-200/55"}`}>
+                    {wallet.isAvailable ? "Ready" : "Not detected"}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+          {props.wallets.length === 0 ? (
+            <button className="button-primary w-full justify-center" type="button" onClick={() => props.onConnect()} disabled={isConnecting}>
+              <Wallet size={18} />
+              {isConnecting ? "Checking wallets..." : "Check wallet options"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {isConnected ? (
         <div
@@ -118,7 +153,7 @@ export function WalletPanel(props: WalletPanelProps) {
             <AlertTriangle className="mt-0.5 shrink-0" size={17} aria-hidden="true" />
           )}
           <div>
-            <p className="font-semibold">{props.isTestnet ? "Freighter is on Testnet" : "Switch Freighter to Testnet"}</p>
+            <p className="font-semibold">{props.isTestnet ? "Wallet is on Testnet" : "Switch wallet to Testnet"}</p>
             <p className="mt-1 text-violet-100/70">
               Current network: {props.networkName ?? "Unknown"}
             </p>
@@ -159,12 +194,12 @@ export function WalletPanel(props: WalletPanelProps) {
               </div>
               <div>
                 <p className="section-eyebrow">Network Guard</p>
-                <h3 className="mt-1 text-lg font-semibold text-ink">Switch Freighter to Testnet</h3>
+                <h3 className="mt-1 text-lg font-semibold text-ink">Switch wallet to Testnet</h3>
               </div>
             </div>
 
             <div className="space-y-3 rounded-lg border border-line/55 bg-paper p-4 text-sm leading-6 text-violet-100/80">
-              <p>1. Open the Freighter extension.</p>
+              <p>1. Open your connected wallet.</p>
               <p>2. Open Settings or the network selector.</p>
               <p>3. Change network from PUBLIC/Mainnet to Testnet.</p>
               <p>4. Return here and refresh the network status.</p>
