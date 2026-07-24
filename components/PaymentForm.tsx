@@ -14,12 +14,14 @@ import {
   UserRound,
   X
 } from "lucide-react";
+import { shortenPublicKey } from "@/lib/explorer";
 import { validateAmount, validateRecipientAddress } from "@/lib/validation";
 
 type PaymentFormProps = {
   isConnected: boolean;
   isSubmitting: boolean;
   balance: string | null;
+  publicKey: string | null;
   onSendPayment: (destinationPublicKey: string, amount: string, memo: string) => Promise<void>;
   onEdit: () => void;
   recipientSuggestion: string | null;
@@ -223,6 +225,19 @@ export function PaymentForm(props: PaymentFormProps) {
       </div>
 
       <form className="send-payment-form" onSubmit={handleSubmit}>
+        <div className="mobile-from-wallet">
+          <span>From</span>
+          <div className="mobile-from-card">
+            <div className="wallet-avatar-dot" />
+            <div>
+              <strong>{props.publicKey ? shortenPublicKey(props.publicKey) : "Connect wallet"}</strong>
+              <small>{props.balance ? `${Number(props.balance).toFixed(4)} XLM` : "0.0000 XLM"}</small>
+            </div>
+            <b>{props.isConnected ? "Connected" : "Disconnected"}</b>
+            <i aria-hidden="true">⌄</i>
+          </div>
+        </div>
+
         <label className="send-field">
           <span>
             Recipient Address <b>*</b>

@@ -7,6 +7,8 @@ import {
   Info,
   LayoutDashboard,
   MoreVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
   Send,
   Settings,
   WalletCards,
@@ -27,21 +29,32 @@ const navItems = [
 type Props = {
   activeSection: string;
   isOpen: boolean;
+  isCollapsed: boolean;
   onClose: () => void;
+  onToggleCollapsed: () => void;
   onNavigate: (section: string) => void;
   publicKey: string | null;
   walletName: string | null;
 };
 
-export function AppSidebar({ activeSection, isOpen, onClose, onNavigate, publicKey, walletName }: Props) {
+export function AppSidebar({ activeSection, isOpen, isCollapsed, onClose, onToggleCollapsed, onNavigate, publicKey, walletName }: Props) {
   return (
     <>
       {isOpen ? <button className="sidebar-backdrop" type="button" onClick={onClose} aria-label="Close menu" /> : null}
-      <aside className={`app-sidebar ${isOpen ? "is-open" : ""}`}>
+      <aside className={`app-sidebar ${isOpen ? "is-open" : ""} ${isCollapsed ? "is-collapsed" : ""}`}>
         <div className="sidebar-brand">
           <img className="brand-logo" src="/logo.png" alt="LumenPay logo" />
           <span>LumenPay</span>
           <small>Lite</small>
+          <button
+            className="sidebar-collapse-toggle"
+            type="button"
+            onClick={onToggleCollapsed}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
           <button className="sidebar-close" type="button" onClick={onClose} aria-label="Close menu">
             <X size={20} />
           </button>
@@ -55,19 +68,20 @@ export function AppSidebar({ activeSection, isOpen, onClose, onNavigate, publicK
                 key={item.id}
                 className={activeSection === item.id ? "active" : ""}
                 type="button"
-                onClick={() => {
-                  onNavigate(item.id);
-                  onClose();
-                }}
-              >
-                <Icon size={19} />
-                <span>{item.label}</span>
+              onClick={() => {
+                onNavigate(item.id);
+                onClose();
+              }}
+              title={isCollapsed ? item.label : undefined}
+            >
+              <Icon size={19} />
+              <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        <button className="sidebar-account-card" type="button" onClick={() => onNavigate("wallets")}>
+        <button className="sidebar-account-card" type="button" onClick={() => onNavigate("wallets")} title={isCollapsed ? (publicKey ? shortenPublicKey(publicKey) : "Connect wallet") : undefined}>
             <CircleUserRound size={33} />
             <div>
               <strong>{publicKey ? (walletName ?? "Connected Wallet") : "Not Connected"}</strong>
@@ -78,7 +92,7 @@ export function AppSidebar({ activeSection, isOpen, onClose, onNavigate, publicK
       </aside>
 
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-        {navItems.slice(0, 4).map((item) => {
+        {navItems.filter((item) => ["dashboard", "send-payment", "activity", "wallets", "settings"].includes(item.id)).map((item) => {
           const Icon = item.icon;
           return (
             <button
@@ -88,7 +102,7 @@ export function AppSidebar({ activeSection, isOpen, onClose, onNavigate, publicK
               onClick={() => onNavigate(item.id)}
             >
               <Icon size={19} />
-              <span>{item.label.replace(" Payment", "")}</span>
+              <span>{item.id === "send-payment" ? "Send" : item.id === "wallets" ? "Wallets" : item.label.replace(" Feed", "")}</span>
             </button>
           );
         })}

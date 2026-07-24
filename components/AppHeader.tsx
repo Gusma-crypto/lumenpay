@@ -22,6 +22,11 @@ export function AppHeader(props: AppHeaderProps) {
         <button className="mobile-menu-button" type="button" onClick={props.onMenuOpen} aria-label="Open navigation">
           <Menu size={21} />
         </button>
+        <div className="mobile-topbar-brand">
+          <img src="/logo.png" alt="" />
+          <strong>LumenPay</strong>
+          <small>Lite</small>
+        </div>
         <div className="network-pill">
           <span />
           Stellar Testnet

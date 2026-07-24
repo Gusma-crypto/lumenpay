@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -13,6 +13,7 @@ import {
   Filter,
   Github,
   Headphones,
+  Info,
   Moon,
   Monitor,
   RefreshCw,
@@ -91,6 +92,7 @@ type AppNotification = {
 };
 
 const STORED_WALLET_KEY = "lumenpay.connectedWallet";
+const STORED_SIDEBAR_KEY = "lumenpay.sidebarCollapsed";
 
 type StoredWalletSession = {
   address: string;
@@ -166,6 +168,7 @@ export default function Home() {
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [paymentFormResetSignal, setPaymentFormResetSignal] = useState(0);
   const [activityQuery, setActivityQuery] = useState("");
@@ -173,6 +176,8 @@ export default function Home() {
   const [autoRecordContract, setAutoRecordContract] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
   const [confirmTransactions, setConfirmTransactions] = useState(true);
+  const knownPaymentIdsRef = useRef<Set<string>>(new Set());
+  const hasLoadedPaymentHistoryRef = useRef(false);
 
   const isConnected = walletStatus === "connected" && Boolean(publicKey);
   const isSubmitting = transactionResult.status === "signing" || transactionResult.status === "submitting";
@@ -224,6 +229,9 @@ export default function Home() {
       icon: Box
     }))
   ].slice(0, 12);
+  const latestPaymentActivity = activityRows.find((row) => row.type === "PaymentSent" || row.type === "PaymentReceived");
+  const latestContractActivity = activityRows.find((row) => row.type === "PaymentRecorded");
+  const mobileActivityRows = activityRows.slice(0, 4);
   const normalizedActivityQuery = activityQuery.trim().toLowerCase();
   const filteredActivityRows = normalizedActivityQuery
     ? activityRows.filter((row) =>
@@ -254,6 +262,18 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [notification]);
 
+  useEffect(() => {
+    setIsSidebarCollapsed(window.localStorage.getItem(STORED_SIDEBAR_KEY) === "true");
+  }, []);
+
+  function toggleSidebarCollapsed() {
+    setIsSidebarCollapsed((current) => {
+      const nextValue = !current;
+      window.localStorage.setItem(STORED_SIDEBAR_KEY, String(nextValue));
+      return nextValue;
+    });
+  }
+
   const refreshBalance = useCallback(async () => {
     if (!publicKey) {
       setBalance(null);
@@ -283,11 +303,13 @@ export default function Home() {
     void refreshBalance();
   }, [refreshBalance]);
 
-  const refreshPaymentHistory = useCallback(async () => {
+  const refreshPaymentHistory = useCallback(async (options?: { notifyNew?: boolean }) => {
     if (!publicKey) {
       setPaymentHistory([]);
       setHistoryError(null);
       setIsHistoryLoading(false);
+      knownPaymentIdsRef.current = new Set();
+      hasLoadedPaymentHistoryRef.current = false;
       return;
     }
 
@@ -297,17 +319,55 @@ export default function Home() {
     try {
       const history = await fetchPaymentHistory(publicKey);
       setPaymentHistory(history);
+
+      const knownPaymentIds = knownPaymentIdsRef.current;
+      const newPayments = history.filter((item) => !knownPaymentIds.has(item.id));
+      history.forEach((item) => knownPaymentIds.add(item.id));
+
+      if (!hasLoadedPaymentHistoryRef.current) {
+        hasLoadedPaymentHistoryRef.current = true;
+        return;
+      }
+
+      if (options?.notifyNew && newPayments.length > 0) {
+        const latestPayment = newPayments[0];
+        const isReceived = latestPayment.direction === "received";
+        const title = newPayments.length > 1
+          ? `${newPayments.length} New Transfers`
+          : isReceived
+            ? "Incoming Transfer"
+            : "Transfer Sent";
+        const counterparty = isReceived ? latestPayment.from : latestPayment.to;
+        const message = newPayments.length > 1
+          ? `${newPayments.length} transaksi baru terdeteksi di Stellar Testnet.`
+          : `${Number(latestPayment.amount).toFixed(7)} ${latestPayment.asset} ${isReceived ? "diterima dari" : "dikirim ke"} ${shortenPublicKey(counterparty)}.`;
+
+        showNotification(isReceived ? "success" : "form", title, message);
+        void refreshBalance();
+      }
     } catch (error) {
       setPaymentHistory([]);
       setHistoryError(error instanceof Error ? error.message : "Failed to fetch transaction history.");
     } finally {
       setIsHistoryLoading(false);
     }
-  }, [publicKey]);
+  }, [publicKey, refreshBalance]);
 
   useEffect(() => {
     void refreshPaymentHistory();
   }, [refreshPaymentHistory]);
+
+  useEffect(() => {
+    if (!publicKey || walletStatus !== "connected") {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshPaymentHistory({ notifyNew: true });
+    }, 12_000);
+
+    return () => window.clearInterval(interval);
+  }, [publicKey, walletStatus, refreshPaymentHistory]);
 
   useEffect(() => {
     void listWallets().then((options) => setWallets(options.length > 0 ? options : FALLBACK_WALLETS)).catch(() => setWallets(FALLBACK_WALLETS));
@@ -441,6 +501,8 @@ export default function Home() {
     setPendingPayment(null);
     setCompletedPayment(null);
     setPaymentHistory([]);
+    knownPaymentIdsRef.current = new Set();
+    hasLoadedPaymentHistoryRef.current = false;
     setHistoryError(null);
     setRecipientSuggestion(null);
     setContractHash(null);
@@ -625,13 +687,15 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell yellow-belt-shell" data-theme={theme}>
+    <main className={`app-shell yellow-belt-shell ${isSendPaymentPage ? "send-mobile-mode" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`} data-theme={theme}>
       {notification ? <NotificationPopup notification={notification} onClose={() => setNotification(null)} /> : null}
 
       <AppSidebar
         activeSection={activeSection}
         isOpen={isSidebarOpen}
+        isCollapsed={isSidebarCollapsed}
         onClose={() => setIsSidebarOpen(false)}
+        onToggleCollapsed={toggleSidebarCollapsed}
         onNavigate={navigateTo}
         publicKey={publicKey}
         walletName={walletName}
@@ -656,6 +720,12 @@ export default function Home() {
       <div className={`dashboard-content ${isSendPaymentPage || isActivityPage || isWalletPage || isContractPage || isSettingsPage ? "send-only-content" : ""}`}>
         {isSendPaymentPage ? (
           <section className="send-page" id="send-payment">
+            <div className="send-mobile-header">
+              <button type="button" onClick={() => navigateTo("dashboard")} aria-label="Back to dashboard">←</button>
+              <h1>Send Payment</h1>
+              <span><i /> Testnet</span>
+            </div>
+
             <div className="send-page-heading">
               <div className="breadcrumb-row">
                 <span>⌂</span>
@@ -694,6 +764,7 @@ export default function Home() {
                 isConnected={isConnected}
 	                isSubmitting={isSubmitting}
 	                balance={balance}
+	                publicKey={publicKey}
 	                onSendPayment={reviewPayment}
 	                onEdit={() => {
 	                  setTransactionResult({ status: "idle" });
@@ -1607,8 +1678,16 @@ export default function Home() {
         <>
         <section className="dashboard-hero" id="dashboard">
           <div className="hero-copy">
-            <h1>Welcome to <em>LumenPay Lite</em></h1>
+            <h1><span>Send. Track.</span> <em>On Stellar.</em></h1>
             <p>A multi-wallet Stellar Testnet payment tracker.<br />Send XLM, record payments on-chain, and follow<br />everything in real-time.</p>
+            <div className="hero-actions">
+              <button className="primary-action" type="button" onClick={() => navigateTo("send-payment")}>
+                Send XLM Payment <Send size={17} aria-hidden="true" />
+              </button>
+              <button className="secondary-action" type="button" onClick={() => navigateTo("about")}>
+                <Info size={17} aria-hidden="true" /> How it works
+              </button>
+            </div>
           </div>
           <div className="stellar-orbit" aria-hidden="true">
             <div className="orbit orbit-one" />
@@ -1657,6 +1736,69 @@ export default function Home() {
               </article>
             );
           })}
+        </section>
+
+        <section className="mobile-dashboard-panels" aria-label="Mobile dashboard overview">
+          <article className="mobile-transaction-card">
+            <div className="mobile-card-heading">
+              <h2>Transaction Status</h2>
+              <button type="button" onClick={() => navigateTo("activity")}>View All</button>
+            </div>
+            <div className="mobile-status-timeline">
+              <div className="mobile-status-item">
+                <i><Send size={18} aria-hidden="true" /></i>
+                <div>
+                  <strong>XLM Payment</strong>
+                  <span>{latestPaymentActivity ? `To ${shortenPublicKey(latestPaymentActivity.to)}` : "Ready to send payment"}</span>
+                  <small>{latestPaymentActivity?.hash ? shortenPublicKey(latestPaymentActivity.hash) : "No payment submitted yet"}</small>
+                </div>
+                <b className={latestPaymentActivity ? "success" : "ready"}>{latestPaymentActivity ? "SUCCESS" : "READY"}</b>
+              </div>
+              <div className="mobile-status-item">
+                <i><Box size={18} aria-hidden="true" /></i>
+                <div>
+                  <strong>Contract Record</strong>
+                  <span>{latestContractActivity ? `Ledger ${latestContractActivity.ledger}` : "Waiting for contract record"}</span>
+                  <small>{latestContractActivity?.hash ? shortenPublicKey(latestContractActivity.hash) : "No contract event yet"}</small>
+                </div>
+                <b className={latestContractActivity ? "success" : "ready"}>{latestContractActivity ? "SUCCESS" : "READY"}</b>
+              </div>
+            </div>
+            <div className="mobile-success-banner">
+              <CheckCircle2 size={17} aria-hidden="true" />
+              <span>{transactionResult.status === "success" ? "Payment sent successfully on Stellar Testnet." : "Connect wallet and send XLM to start tracking."}</span>
+            </div>
+          </article>
+
+          <article className="mobile-live-card">
+            <div className="mobile-card-heading">
+              <h2>Live Activity Feed</h2>
+              <button type="button" onClick={() => navigateTo("activity")}>View All</button>
+            </div>
+            <div className="mobile-live-list">
+              {mobileActivityRows.length ? (
+                mobileActivityRows.map((row) => {
+                  const Icon = row.icon;
+                  return (
+                    <button type="button" key={row.id} onClick={() => navigateTo("activity")}>
+                      <i><Icon size={18} aria-hidden="true" /></i>
+                      <span>
+                        <strong>{row.description}</strong>
+                        <small>{row.amount} · {row.time}</small>
+                      </span>
+                      <b>{row.status}</b>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="mobile-empty-feed">
+                  <Radio size={23} aria-hidden="true" />
+                  <strong>No activity yet</strong>
+                  <span>Send a payment to create the first activity item.</span>
+                </div>
+              )}
+            </div>
+          </article>
         </section>
 
         <section className="overview-grid">
