@@ -164,7 +164,7 @@ export function PaymentForm(props: PaymentFormProps) {
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
           <p className="section-eyebrow">Payment</p>
-          <h2 className="text-xl font-semibold text-ink">Send XLM Testnet</h2>
+          <h2 className="text-xl font-semibold text-ink">Send XLM Payment</h2>
         </div>
         {props.latestTransactionHash ? (
           <a

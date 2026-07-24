@@ -28,9 +28,9 @@ export function LiveContractActivity(props: Props) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="section-eyebrow">Soroban events</p>
-          <h2 className="mt-1 text-xl font-semibold text-ink">Live Payment Activity</h2>
+          <h2 className="mt-1 text-xl font-semibold text-ink">Live Activity Feed</h2>
           <p className="mt-2 text-sm leading-6 text-violet-100/70">
-            Contract events refresh every 6 seconds and after every recorded payment.
+            Payments and contract events, synchronized every 6 seconds.
           </p>
         </div>
         <button className="icon-button" type="button" onClick={props.onRefresh} disabled={props.isLoading} aria-label="Refresh events">

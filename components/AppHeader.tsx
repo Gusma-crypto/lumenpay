@@ -1,4 +1,4 @@
-import { BadgeDollarSign, LogOut, Moon, Plug, ShieldCheck, Sparkles, Sun } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Plug, Sun } from "lucide-react";
 import { shortenPublicKey } from "@/lib/explorer";
 
 type AppHeaderProps = {
@@ -8,6 +8,8 @@ type AppHeaderProps = {
   onToggleTheme: () => void;
   onConnect: () => void;
   onDisconnect: () => void;
+  onMenuOpen?: () => void;
+  onNotifications: () => void;
 };
 
 export function AppHeader(props: AppHeaderProps) {
@@ -15,30 +17,21 @@ export function AppHeader(props: AppHeaderProps) {
   const isConnecting = props.walletStatus === "connecting";
 
   return (
-    <header className="border-b border-line/40 bg-[#080913]/80 px-5 py-5 backdrop-blur md:px-8">
-      <div className="mx-auto flex w-full max-w-[1380px] flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-lg border border-line/50 bg-gradient-to-br from-cyan-400 to-violet-500 text-[#070812] shadow-panel">
-            <BadgeDollarSign size={25} aria-hidden="true" />
-          </div>
-          <div>
-            <p className="section-eyebrow">Stellar Testnet</p>
-            <h1 className="text-2xl font-semibold text-ink">LumenPay Lite</h1>
-          </div>
+    <header className="app-topbar">
+      <div className="topbar-left">
+        <button className="mobile-menu-button" type="button" onClick={props.onMenuOpen} aria-label="Open navigation">
+          <Menu size={21} />
+        </button>
+        <div className="network-pill">
+          <span />
+          Stellar Testnet
+          <ChevronDown size={15} />
         </div>
-
-        <div className="flex flex-col gap-3 text-sm text-cyan-100 sm:flex-row sm:items-center">
-          <div className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-[#111226]/85 px-3 py-2 shadow-sm">
-            <ShieldCheck size={17} aria-hidden="true" className="text-mint" />
-            Multi-wallet
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-lg border border-line/50 bg-[#111226]/85 px-3 py-2 shadow-sm">
-            <Sparkles size={17} aria-hidden="true" className="text-amber" />
-            Testnet payments
-          </div>
+      </div>
+      <div className="topbar-actions">
           {isConnected && props.publicKey ? (
             <button
-              className="button-secondary min-w-0 justify-center"
+              className="wallet-chip"
               type="button"
               onClick={props.onDisconnect}
               title="Disconnect wallet"
@@ -48,19 +41,21 @@ export function AppHeader(props: AppHeaderProps) {
             </button>
           ) : (
             <button
-              className="button-primary justify-center"
+              className="connect-wallet-button"
               type="button"
-              onClick={props.onConnect}
+              onClick={() => props.onConnect()}
               disabled={isConnecting}
             >
               <Plug size={17} aria-hidden="true" />
-              {isConnecting ? "Connecting" : "Choose wallet"}
+              {isConnecting ? "Connecting..." : "Connect Wallet"}
             </button>
           )}
-          <button className="icon-button" type="button" onClick={props.onToggleTheme} aria-label="Toggle theme" title="Toggle theme">
-            {props.theme === "dark" ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
+          <button className="topbar-icon" type="button" onClick={props.onToggleTheme} aria-label="Toggle theme">
+            <Sun size={20} />
           </button>
-        </div>
+          <button className="topbar-icon" type="button" onClick={props.onNotifications} aria-label="Notifications">
+            <Bell size={20} />
+          </button>
       </div>
     </header>
   );

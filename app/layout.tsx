@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "LumenPay Lite",
-  description: "A Stellar Testnet payment dApp for LumenPay White Belt Level 1."
+  description: "A multi-wallet Stellar Testnet payment tracker for Yellow Belt Level 2."
 };
 
 export default function RootLayout({
@@ -12,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

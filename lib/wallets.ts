@@ -14,11 +14,13 @@ export type WalletOption = {
 };
 
 let initialized = false;
+let walletModules: ReturnType<typeof defaultModules> = [];
 
 function ensureWalletKit() {
   if (!initialized) {
+    walletModules = defaultModules();
     StellarWalletsKit.init({
-      modules: defaultModules(),
+      modules: walletModules,
       network: Networks.TESTNET,
       authModal: {
         showInstallLabel: true,
@@ -32,14 +34,16 @@ function ensureWalletKit() {
 }
 
 export async function listWallets(): Promise<WalletOption[]> {
-  const wallets = await ensureWalletKit().refreshSupportedWallets();
-  return wallets.map((wallet) => ({
-    id: wallet.id,
-    name: wallet.name,
-    icon: wallet.icon,
-    url: wallet.url,
-    isAvailable: wallet.isAvailable
-  }));
+  ensureWalletKit();
+  return Promise.all(
+    walletModules.map(async (wallet) => ({
+      id: wallet.productId,
+      name: wallet.productName,
+      icon: wallet.productIcon,
+      url: wallet.productUrl,
+      isAvailable: await wallet.isAvailable().catch(() => false)
+    }))
+  );
 }
 
 export async function connectWallet(walletId: string) {

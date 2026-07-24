@@ -1,17 +1,30 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, ClipboardCheck, X } from "lucide-react";
-import { AddressBook } from "@/components/AddressBook";
+import {
+  Activity,
+  Box,
+  CheckCircle2,
+  ClipboardCheck,
+  Coins,
+  Copy,
+  ExternalLink,
+  Github,
+  Radio,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  WalletCards,
+  X
+} from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
-import { BalanceCard } from "@/components/BalanceCard";
-import { PaymentActivityChart } from "@/components/PaymentActivityChart";
+import { AppSidebar } from "@/components/AppSidebar";
 import { PaymentForm } from "@/components/PaymentForm";
-import { TransactionHistory } from "@/components/TransactionHistory";
 import { TransactionStatus } from "@/components/TransactionStatus";
 import { WalletPanel } from "@/components/WalletPanel";
 import { LiveContractActivity } from "@/components/LiveContractActivity";
-import { getTestnetExplorerUrl } from "@/lib/explorer";
+import { getTestnetExplorerUrl, shortenPublicKey } from "@/lib/explorer";
 import {
   connectWallet as connectSelectedWallet,
   disconnectWallet as disconnectActiveWallet,
@@ -27,7 +40,8 @@ import {
   ContractCallStatus,
   ContractPaymentEvent,
   fetchPaymentEvents,
-  submitContractTransaction
+  submitContractTransaction,
+  TRACKER_CONTRACT_ID
 } from "@/lib/contract";
 import {
   buildXlmPaymentTransaction,
@@ -71,6 +85,13 @@ type AppNotification = {
   message: string;
 };
 
+const FALLBACK_WALLETS: WalletOption[] = [
+  { id: "freighter", name: "Freighter", icon: "https://stellar.creit.tech/wallet-icons/freighter.png", url: "https://freighter.app", isAvailable: false },
+  { id: "xbull", name: "xBull Wallet", icon: "https://stellar.creit.tech/wallet-icons/xbull.png", url: "https://xbull.app", isAvailable: false },
+  { id: "albedo", name: "Albedo", icon: "https://stellar.creit.tech/wallet-icons/albedo.png", url: "https://albedo.link", isAvailable: true },
+  { id: "rabet", name: "Rabet", icon: "https://stellar.creit.tech/wallet-icons/rabet.png", url: "https://rabet.io", isAvailable: false }
+];
+
 function NotificationPopup(props: { notification: AppNotification; onClose: () => void }) {
   const Icon = props.notification.type === "success" ? CheckCircle2 : ClipboardCheck;
 
@@ -99,7 +120,7 @@ function NotificationPopup(props: { notification: AppNotification; onClose: () =
 }
 
 export default function Home() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [walletStatus, setWalletStatus] = useState<WalletStatus>("disconnected");
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -117,13 +138,17 @@ export default function Home() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [recipientSuggestion, setRecipientSuggestion] = useState<string | null>(null);
   const [notification, setNotification] = useState<AppNotification | null>(null);
-  const [wallets, setWallets] = useState<WalletOption[]>([]);
+  const [wallets, setWallets] = useState<WalletOption[]>(FALLBACK_WALLETS);
   const [walletName, setWalletName] = useState<string | null>(null);
   const [contractEvents, setContractEvents] = useState<ContractPaymentEvent[]>([]);
   const [contractError, setContractError] = useState<string | null>(null);
   const [contractStatus, setContractStatus] = useState<ContractCallStatus>("idle");
   const [contractHash, setContractHash] = useState<string | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const isConnected = walletStatus === "connected" && Boolean(publicKey);
   const isSubmitting = transactionResult.status === "signing" || transactionResult.status === "submitting";
@@ -203,7 +228,7 @@ export default function Home() {
   }, [refreshPaymentHistory]);
 
   useEffect(() => {
-    void listWallets().then(setWallets).catch(() => setWallets([]));
+    void listWallets().then((options) => setWallets(options.length > 0 ? options : FALLBACK_WALLETS)).catch(() => setWallets(FALLBACK_WALLETS));
   }, []);
 
   const refreshContractEvents = useCallback(async () => {
@@ -232,7 +257,7 @@ export default function Home() {
 
   async function connectWallet(walletId?: string) {
     if (!walletId) {
-      setWalletError("Choose one of the available wallets below.");
+      setIsWalletModalOpen(true);
       return;
     }
     setWalletStatus("connecting");
@@ -246,6 +271,7 @@ export default function Home() {
       setFreighterNetwork(connection.network.network);
       setFreighterNetworkPassphrase(connection.network.networkPassphrase);
       setWalletStatus("connected");
+      setIsWalletModalOpen(false);
     } catch (error) {
       setPublicKey(null);
       setFreighterNetwork(null);
@@ -416,162 +442,307 @@ export default function Home() {
     }
   }
 
+  function navigateTo(section: string) {
+    setActiveSection(section);
+    if (section === "wallets") {
+      setIsWalletModalOpen(true);
+      return;
+    }
+    if (section === "settings") {
+      setIsSettingsOpen(true);
+      return;
+    }
+    const targetId =
+      section === "send-payment"
+        ? "send-payment"
+        : section === "activity"
+          ? "activity"
+          : section === "wallets"
+            ? "wallets"
+            : section === "contracts"
+              ? "contracts"
+              : section === "about"
+                ? "about"
+                : "dashboard";
+    window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
   return (
-    <main className="app-shell" data-theme={theme}>
+    <main className="app-shell yellow-belt-shell" data-theme={theme}>
       {notification ? <NotificationPopup notification={notification} onClose={() => setNotification(null)} /> : null}
 
+      <AppSidebar
+        activeSection={activeSection}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNavigate={navigateTo}
+        publicKey={publicKey}
+        walletName={walletName}
+      />
       <AppHeader
         theme={theme}
         publicKey={publicKey}
         walletStatus={walletStatus}
-        onConnect={connectWallet}
+        onConnect={() => void connectWallet()}
         onDisconnect={disconnectWallet}
         onToggleTheme={() => setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"))}
+        onMenuOpen={() => setIsSidebarOpen(true)}
+        onNotifications={() =>
+          showNotification(
+            "form",
+            "Activity Summary",
+            `${paymentHistory.length} payments and ${contractEvents.length} contract events synchronized.`
+          )
+        }
       />
 
-      <section className="mx-auto grid w-full max-w-[1380px] gap-5 px-4 py-5 md:px-6 lg:grid-cols-2 xl:grid-cols-3 xl:items-start">
-        <div className="space-y-5">
-          <div className="rounded-lg border border-line/50 bg-[#101124]/80 p-4 shadow-panel">
-            <p className="section-eyebrow">Step 1</p>
-            <h2 className="mt-1 text-lg font-semibold text-ink">Connect and check balance</h2>
-            <p className="mt-2 text-sm leading-6 text-violet-100/70">
-              Choose a supported Stellar wallet on Testnet, then confirm your available XLM.
-            </p>
+      <div className="dashboard-content">
+        <section className="dashboard-hero" id="dashboard">
+          <div className="hero-copy">
+            <h1>Welcome to <em>LumenPay Lite</em></h1>
+            <p>A multi-wallet Stellar Testnet payment tracker.<br />Send XLM, record payments on-chain, and follow<br />everything in real-time.</p>
           </div>
-          <WalletPanel
-            publicKey={publicKey}
-            status={walletStatus}
-            error={walletError}
-            networkName={freighterNetwork}
-            isTestnet={isFreighterTestnet}
-            onRefreshNetwork={refreshFreighterNetwork}
-            onConnect={connectWallet}
-            onDisconnect={disconnectWallet}
-            wallets={wallets}
-            walletName={walletName}
-          />
-          <BalanceCard
-            balance={balance}
-            assets={assets}
-            isLoading={isBalanceLoading}
-            error={balanceError}
-            isConnected={isConnected}
-            publicKey={publicKey}
-            onRefresh={refreshBalance}
-          />
-          <AddressBook items={paymentHistory} publicKey={publicKey} onSelect={setRecipientSuggestion} />
-        </div>
-
-        <div className="space-y-5">
-          <div className="rounded-lg border border-line/50 bg-[#101124]/80 p-4 shadow-panel">
-            <p className="section-eyebrow">Step 2</p>
-            <h2 className="mt-1 text-lg font-semibold text-ink">Send a Testnet payment</h2>
-            <p className="mt-2 text-sm leading-6 text-violet-100/70">
-              Enter a recipient, amount, optional memo, then review before signing.
-            </p>
+          <div className="stellar-orbit" aria-hidden="true">
+            <div className="orbit orbit-one" />
+            <div className="orbit orbit-two" />
+            <div className="stellar-coin">S</div>
+            <span className="orbit-dot dot-one" />
+            <span className="orbit-dot dot-two" />
           </div>
-          <PaymentForm
-            isConnected={isConnected}
-            isSubmitting={isSubmitting}
-            latestTransactionHash={recentTransaction?.hash ?? null}
-            onSendPayment={reviewPayment}
-            onEdit={() => setTransactionResult({ status: "idle" })}
-            recipientSuggestion={recipientSuggestion}
-          />
-          <TransactionStatus result={transactionResult} />
+          <article className="contract-overview" id="contracts">
+            <div className="contract-network"><strong>Network</strong><span>Stellar Testnet</span></div>
+            <label>Payment Tracker Contract</label>
+            <div className="contract-address">
+              <span>{TRACKER_CONTRACT_ID ? `${TRACKER_CONTRACT_ID.slice(0, 5)}...LUMENPAYTRACKER` : "Contract not configured"}</span>
+              <button type="button" aria-label="Copy contract address" onClick={() => void navigator.clipboard.writeText(TRACKER_CONTRACT_ID)}>
+                <Copy size={15} />
+              </button>
+            </div>
+            <div className="contract-counts">
+              <div><span>Total Records</span><strong>{paymentHistory.length}</strong></div>
+              <div><span>Total Events</span><strong>{contractEvents.length}</strong></div>
+            </div>
+            <a href={`https://stellar.expert/explorer/testnet/contract/${TRACKER_CONTRACT_ID}`} target="_blank" rel="noreferrer">
+              <ExternalLink size={15} /> View on Stellar Expert
+            </a>
+          </article>
+        </section>
 
-          {recentTransaction ? (
-            <section className="panel-card">
-              <p className="section-eyebrow">Latest Payment</p>
-              <h2 className="mt-1 text-xl font-semibold text-ink">{recentTransaction.amount} XLM Sent</h2>
-              <div className="mt-4 space-y-2 text-sm">
-                <p className="rounded-lg border border-line/55 bg-paper p-3 font-mono text-cyan-100 [overflow-wrap:anywhere]">
-                  {recentTransaction.recipient}
-                </p>
-                <p className="rounded-lg border border-line/55 bg-paper p-3 font-mono text-violet-100/80 [overflow-wrap:anywhere]">
-                  {recentTransaction.hash}
-                </p>
-                <a
-                  className="inline-flex font-semibold text-cyan-300 underline-offset-4 hover:underline"
-                  href={getTestnetExplorerUrl(recentTransaction.hash)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View latest transaction
-                </a>
+        <section className="stats-grid">
+          {[
+            { label: "Connected Wallets", value: isConnected ? 1 : 0, note: "This session", icon: Users, tone: "blue" },
+            { label: "Total Payments Recorded", value: paymentHistory.length, note: "On-chain", icon: Box, tone: "purple" },
+            {
+              label: "Total Volume Recorded",
+              value: `${paymentHistory.reduce((total, item) => total + (Number(item.amount) || 0), 0).toFixed(2)} XLM`,
+              note: "On-chain",
+              icon: Coins,
+              tone: "green"
+            },
+            { label: "Total Events", value: contractEvents.length, note: "From smart contract", icon: Radio, tone: "orange" }
+          ].map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <article className="stat-card" key={stat.label}>
+                <div><span>{stat.label}</span><strong>{stat.value}</strong><small>{stat.note}</small></div>
+                <i className={stat.tone}><Icon size={21} /></i>
+              </article>
+            );
+          })}
+        </section>
+
+        <section className="overview-grid">
+          <article className="capabilities-card">
+            <h2>What you can do with LumenPay Lite</h2>
+            <div className="capabilities-list">
+              {[
+                { title: "Send Payments", text: "Send XLM to any Stellar address quickly and securely.", icon: Send, tone: "purple", action: "Send Payment", target: "send-payment" },
+                { title: "Record On-Chain", text: "Successful payments can be recorded to our smart contract.", icon: Box, tone: "green", action: "Learn More", target: "contracts" },
+                { title: "Track in Real-Time", text: "View live events and payment records in the activity feed.", icon: Radio, tone: "orange", action: "Open Activity Feed", target: "activity" },
+                { title: "Use Multiple Wallets", text: "Connect and switch between multiple Stellar wallets anytime.", icon: WalletCards, tone: "blue", action: "Manage Wallets", target: "wallets" }
+              ].map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <div className="capability" key={feature.title}>
+                    <i className={feature.tone}><Icon size={23} /></i>
+                    <strong>{feature.title}</strong>
+                    <p>{feature.text}</p>
+                    <button type="button" onClick={() => navigateTo(feature.target)}>{feature.action}</button>
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+          <article className="activity-overview">
+            <div className="overview-heading">
+              <h2>Live Activity Feed</h2>
+              <button type="button" onClick={() => navigateTo("activity")}>View All</button>
+            </div>
+            <div className="empty-activity">
+              <Box size={31} />
+              <strong>{contractEvents.length ? `${contractEvents.length} events synchronized` : "No activity yet"}</strong>
+              <p>{contractEvents.length ? "Open the activity feed to inspect the latest contract events." : "Connect your wallet and start sending payments to see live events here."}</p>
+              <button type="button" onClick={() => navigateTo("activity")}>Go to Activity Feed</button>
+            </div>
+          </article>
+        </section>
+
+        <section className="dashboard-about-grid" id="about">
+          <article className="dashboard-about">
+            <Sparkles size={20} />
+            <div>
+              <h2>About LumenPay Lite</h2>
+              <p>LumenPay Lite is built for the Stellar Quest – Yellow Belt (Level 2) challenge. It demonstrates multi-wallet support, smart contract integration, and real-time event handling on Stellar Testnet.</p>
+              <div>
+                <a href="https://github.com/Gusma-crypto/lumenpay/blob/main/YELLOW_BELT_STEP_BY_STEP.md" target="_blank" rel="noreferrer">Read Full Guide <ExternalLink size={14} /></a>
+                <a href="https://github.com/Gusma-crypto/lumenpay" target="_blank" rel="noreferrer"><Github size={14} /> View on GitHub</a>
               </div>
-            </section>
-          ) : null}
-        </div>
+            </div>
+          </article>
+          <article className="why-stellar">
+            <h2>Why Stellar?</h2>
+            <p><CheckCircle2 size={15} /> Fast and low-cost transactions</p>
+            <p><CheckCircle2 size={15} /> Built for real-world financial use cases</p>
+            <p><CheckCircle2 size={15} /> Strong ecosystem and developer support</p>
+            <a href="https://stellar.org" target="_blank" rel="noreferrer">Learn more about Stellar <ExternalLink size={13} /></a>
+          </article>
+        </section>
 
-        <div className="space-y-5 lg:col-span-2 xl:col-span-1">
-          <div className="rounded-lg border border-line/50 bg-[#101124]/80 p-4 shadow-panel">
-            <p className="section-eyebrow">Step 3</p>
-            <h2 className="mt-1 text-lg font-semibold text-ink">Track activity</h2>
-            <p className="mt-2 text-sm leading-6 text-violet-100/70">
-              View payment totals, filter recent transactions, and open hashes in Stellar Expert.
-            </p>
+        <div className="dashboard-footer"><span><ShieldCheck size={14} /> Secure. Transparent. Built on Stellar.</span><span>© 2026 LumenPay Lite. All rights reserved.</span></div>
+
+        {activeSection === "send-payment" || activeSection === "activity" ? (
+        <section className="dashboard-grid feature-workspace">
+          <div id="send-payment" className="dashboard-panel send-panel">
+            <PaymentForm
+              isConnected={isConnected}
+              isSubmitting={isSubmitting}
+              latestTransactionHash={recentTransaction?.hash ?? null}
+              onSendPayment={reviewPayment}
+              onEdit={() => setTransactionResult({ status: "idle" })}
+              recipientSuggestion={recipientSuggestion}
+            />
           </div>
-          <PaymentActivityChart items={paymentHistory} isConnected={isConnected} />
-          <TransactionHistory
-            items={paymentHistory}
-            isLoading={isHistoryLoading}
-            error={historyError}
-            isConnected={isConnected}
-            onRefresh={refreshPaymentHistory}
-          />
-          <LiveContractActivity
-            events={contractEvents}
-            isLoading={isContractLoading}
-            error={contractError}
-            callStatus={contractStatus}
-            callHash={contractHash}
-            onRefresh={refreshContractEvents}
-          />
+          <div className="dashboard-panel status-panel">
+            <h2>Transaction Status</h2>
+            <p className="panel-subtitle">Follow payment and contract confirmation.</p>
+            <TransactionStatus result={transactionResult} />
+            <div className={`contract-status-row status-${contractStatus}`} id="contracts">
+              <div className="status-icon"><Coins size={19} /></div>
+              <div><strong>Contract Record</strong><span>LumenPayTracker · record_payment</span></div>
+              <b>{contractStatus === "idle" ? "READY" : contractStatus.toUpperCase()}</b>
+            </div>
+            {contractHash ? (
+              <a className="explorer-wide" href={getTestnetExplorerUrl(contractHash)} target="_blank" rel="noreferrer">
+                View on Stellar Expert <ExternalLink size={15} />
+              </a>
+            ) : null}
+          </div>
+          <div id="activity" className="dashboard-panel activity-panel">
+            <LiveContractActivity
+              events={contractEvents}
+              isLoading={isContractLoading}
+              error={contractError}
+              callStatus={contractStatus}
+              callHash={contractHash}
+              onRefresh={refreshContractEvents}
+            />
+          </div>
+        </section>
+        ) : null}
+
+      </div>
+
+      {isWalletModalOpen ? (
+        <div className="wallet-modal-backdrop">
+          <div className="wallet-modal-card">
+            <button className="wallet-modal-close" type="button" onClick={() => setIsWalletModalOpen(false)} aria-label="Close wallet selection"><X size={19} /></button>
+            <WalletPanel
+              publicKey={publicKey}
+              status={walletStatus}
+              error={walletError}
+              networkName={freighterNetwork}
+              isTestnet={isFreighterTestnet}
+              onRefreshNetwork={refreshFreighterNetwork}
+              onConnect={connectWallet}
+              onDisconnect={disconnectWallet}
+              wallets={wallets}
+              walletName={walletName}
+            />
+          </div>
         </div>
-      </section>
+      ) : null}
+
+      {isSettingsOpen ? (
+        <div className="wallet-modal-backdrop">
+          <section className="settings-modal-card">
+            <button className="wallet-modal-close" type="button" onClick={() => setIsSettingsOpen(false)} aria-label="Close settings">
+              <X size={19} />
+            </button>
+            <p className="section-eyebrow">Preferences</p>
+            <h2>Dashboard Settings</h2>
+            <p>Choose the visual theme and review the active Stellar network.</p>
+            <div className="settings-network-row">
+              <span>Network</span>
+              <strong><i /> Stellar Testnet</strong>
+            </div>
+            <div className="settings-theme-grid">
+              <button className={theme === "light" ? "active" : ""} type="button" onClick={() => setTheme("light")}>
+                Light dashboard
+              </button>
+              <button className={theme === "dark" ? "active" : ""} type="button" onClick={() => setTheme("dark")}>
+                Dark dashboard
+              </button>
+            </div>
+            <button className="primary-action settings-done" type="button" onClick={() => setIsSettingsOpen(false)}>
+              Save preferences
+            </button>
+          </section>
+        </div>
+      ) : null}
 
       {pendingPayment ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050611]/75 p-4 backdrop-blur-sm">
-          <section className="w-full max-w-lg rounded-lg border border-line/60 bg-[#121327] p-5 shadow-panel">
-            <div className="mb-5">
+        <div className="review-backdrop">
+          <section className="review-card">
+            <div className="review-heading">
               <p className="section-eyebrow">Preview</p>
-              <h2 className="mt-1 text-xl font-semibold text-ink">Review Transaction</h2>
+              <h2>Review Transaction</h2>
             </div>
 
-            <div className="space-y-3 text-sm">
-              <div className="rounded-lg border border-line/55 bg-paper p-3">
-                <p className="font-medium text-violet-200/70">Recipient</p>
-                <p className="mt-1 break-all font-mono text-cyan-100">{pendingPayment.recipient}</p>
+            <div className="review-details">
+              <div className="review-field recipient">
+                <p>Recipient</p>
+                <strong>{pendingPayment.recipient}</strong>
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-line/55 bg-paper p-3">
-                  <p className="font-medium text-violet-200/70">Amount</p>
-                  <p className="mt-1 font-semibold text-ink">{pendingPayment.amount} XLM</p>
+              <div className="review-three-columns">
+                <div className="review-field">
+                  <p>Amount</p>
+                  <strong>{pendingPayment.amount} XLM</strong>
                 </div>
-                <div className="rounded-lg border border-line/55 bg-paper p-3">
-                  <p className="font-medium text-violet-200/70">Network</p>
-                  <p className="mt-1 font-semibold text-ink">{freighterNetwork ?? "Testnet"}</p>
+                <div className="review-field">
+                  <p>Network</p>
+                  <strong>{freighterNetwork ?? "Testnet"}</strong>
                 </div>
-                <div className="rounded-lg border border-line/55 bg-paper p-3">
-                  <p className="font-medium text-violet-200/70">Estimated fee</p>
-                  <p className="mt-1 font-semibold text-ink">{ESTIMATED_FEE_XLM} XLM</p>
+                <div className="review-field">
+                  <p>Estimated fee</p>
+                  <strong>{ESTIMATED_FEE_XLM} XLM</strong>
                 </div>
               </div>
               {pendingPayment.memo ? (
-                <div className="rounded-lg border border-line/55 bg-paper p-3">
-                  <p className="font-medium text-violet-200/70">Memo</p>
-                  <p className="mt-1 text-cyan-100">{pendingPayment.memo}</p>
+                <div className="review-field">
+                  <p>Memo</p>
+                  <strong>{pendingPayment.memo}</strong>
                 </div>
               ) : null}
             </div>
 
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <button className="button-secondary flex-1 justify-center" type="button" onClick={() => setPendingPayment(null)}>
+            <div className="review-actions">
+              <button className="secondary-action" type="button" onClick={() => setPendingPayment(null)}>
                 Cancel
               </button>
               <button
-                className="button-primary flex-1 justify-center"
+                className="primary-action"
                 type="button"
                 onClick={() => {
                   const payment = pendingPayment;

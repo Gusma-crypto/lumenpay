@@ -16,7 +16,7 @@ Setiap langkah berisi:
 
 ## Langkah 01 — Fondasi Yellow Belt
 
-**Tanggal:** 24 Juli 2026  
+**Tanggal:** 24 Juli 2026
 **Status:** SELESAI
 
 **Tujuan**
@@ -48,7 +48,7 @@ Menambahkan multi-wallet, contract integration, live events, dan transaction sta
 
 ## Langkah 02 — Hardening LumenPayTracker
 
-**Tanggal:** 24 Juli 2026  
+**Tanggal:** 24 Juli 2026
 **Status:** SELESAI
 
 **Tujuan**
@@ -300,3 +300,225 @@ Menyediakan command pembelajaran yang dapat langsung digunakan untuk setiap fung
 - Setiap `payment_hash` write test harus unik.
 - Write test membuat data permanen sementara pada Testnet.
 - CLI validation bukan pengganti frontend wallet validation untuk submission.
+
+---
+
+## Langkah 10 — Redesign Dashboard Yellow Belt v2
+
+**Tanggal:** 24 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menyesuaikan tampilan aplikasi dengan referensi `dashboard.png`, `dashboardmenu.png`, dan `send.png` tanpa mengubah alur wallet, payment, contract, atau event synchronization.
+
+**Perubahan**
+
+- Menambahkan sidebar desktop dan bottom navigation mobile.
+- Mengganti header menjadi topbar Testnet dan wallet controls.
+- Menambahkan hero `Send. Track. On Stellar`.
+- Menambahkan visual orbit Stellar berbasis CSS.
+- Menambahkan empat summary cards.
+- Menyusun ulang dashboard menjadi panel Send Payment, Transaction Status, dan Live Payment Activity.
+- Memindahkan multi-wallet selector ke modal.
+- Menambahkan responsive layout desktop, tablet, dan mobile.
+- Mengubah visual utama menjadi light dashboard dengan warna ungu Yellow Belt.
+- Memperbaiki wallet detection agar kegagalan satu adapter tidak menghapus seluruh wallet option.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus setelah seluruh perubahan.
+- `npm run build`: lulus setelah seluruh perubahan.
+- Screenshot desktop dan mobile lokal dibuat dan dibandingkan dengan referensi.
+- Overflow horizontal mobile dan topbar mobile diperbaiki.
+- Fallback empat wallet options ditambahkan agar selector tetap informatif saat adapter detection gagal.
+
+**Risiko/catatan**
+
+- Wallet extension tidak tersedia di browser headless, sehingga opsi akan tampil sebagai `Not detected`.
+- Wallet connect dan signing tetap perlu diuji manual melalui browser dengan extension asli.
+- Warning dependency Stellar/ESLint lama tetap muncul pada build, tetapi compilation, type checking, static generation, dan exit code sukses.
+
+---
+
+## Langkah 11 — Perbaikan Hydration Mismatch
+
+**Tanggal:** 24 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menghilangkan React hydration overlay ketika wallet/browser extension menambahkan CSS variable `--swk-*` pada elemen HTML sebelum aplikasi selesai hydrate.
+
+**Penyebab**
+
+- Server merender `<html lang="en">`.
+- Stellar wallet kit atau browser extension menambahkan atribut `style` pada `<html>` di sisi client.
+- React mendeteksi perbedaan atribut server dan client sebagai hydration mismatch.
+
+**Perubahan**
+
+- Menambahkan `suppressHydrationWarning` pada root `<html>` dan `<body>`.
+- Memperbarui metadata description dari White Belt Level 1 menjadi Yellow Belt Level 2.
+
+**Risiko/catatan**
+
+- Suppression hanya diterapkan pada root boundary yang memang dapat dimodifikasi extension.
+- Tidak menyembunyikan hydration mismatch pada komponen aplikasi di bawahnya.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus.
+- `npm run build`: lulus.
+- Static generation berhasil untuk seluruh route.
+
+---
+
+## Langkah 12 — Aktivasi Navigasi dan Seluruh Tombol Dashboard
+
+**Tanggal:** 24 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Memastikan menu dashboard dan semua tombol interaktif menjalankan fungsi yang sesuai, sekaligus menyelaraskan menu dengan referensi `dashboardmenu.png`.
+
+**Perubahan**
+
+- Mengaktifkan navigasi halus menuju Dashboard, Send Payment, Activity Feed, Contracts, dan About.
+- Membuka modal multi-wallet dari menu My Wallets, tombol Connect Wallet, dan Choose Wallet.
+- Menambahkan menu Settings beserta modal pilihan light/dark dashboard dan informasi Stellar Testnet.
+- Mengaktifkan tombol notifikasi untuk menampilkan ringkasan payment dan contract event.
+- Mengaktifkan tombol tema di topbar dan menambahkan tampilan dark dashboard.
+- Menampilkan kartu wallet aktif di bagian bawah sidebar.
+- Mengaktifkan tombol hero berdasarkan kondisi wallet: membuka wallet selector atau menuju form pembayaran.
+- Menghubungkan How it works dan Read Full Guide ke bagian/panduan yang sesuai.
+- Mempertahankan aksi Refresh Balance, Refresh Activity, Disconnect Wallet, submit payment, contract call, serta link Stellar Explorer.
+- Mengubah tema awal menjadi light agar sesuai dengan desain referensi.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus tanpa error.
+- `npm run build`: lulus; compilation, type checking, dan static generation berhasil.
+- `git diff --check`: tidak menemukan whitespace error.
+
+**Risiko/catatan**
+
+- Connect, signing, pengiriman XLM, dan contract call tetap harus diuji manual dengan wallet extension pada Stellar Testnet.
+- Warning `sodium-native` dan patch ESLint masih muncul saat build, tetapi bukan build failure dan exit code tetap sukses.
+
+---
+
+## Langkah 13 — Penyelarasan Dashboard dengan dashboardmenu.png
+
+**Tanggal:** 24 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menyelaraskan struktur, warna, dan hierarki dashboard dengan referensi `referensi/dashboardmenu.png`.
+
+**Perubahan**
+
+- Mengubah hero menjadi `Welcome to LumenPay Lite` dengan deskripsi seperti referensi.
+- Menambahkan kartu ringkasan contract Testnet, jumlah record/event, copy Contract ID, dan tautan Stellar Expert.
+- Menyesuaikan empat kartu statistik: connected wallets, recorded payments, volume, dan events.
+- Menambahkan bagian `What you can do with LumenPay Lite` dengan empat tombol yang terhubung ke fitur aplikasi.
+- Menambahkan ringkasan `Live Activity Feed` yang memakai data event aktual.
+- Menambahkan blok About, Why Stellar, tautan guide/GitHub, dan footer.
+- Menyamakan palet dengan referensi: putih, navy, ungu, hijau, biru, dan oranye.
+- Mengubah modal Review Transaction dari tema gelap menjadi kartu putih–ungu yang konsisten.
+- Menambahkan layout responsif untuk dashboard baru dan modal transaksi.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus tanpa error.
+- `npm run build`: lulus; compilation, type checking, dan static generation berhasil.
+
+**Risiko/catatan**
+
+- Ilustrasi Stellar dibuat dengan CSS agar tidak membutuhkan aset eksternal.
+- Warning dependency `sodium-native` dan patch ESLint tetap bersifat non-blocking.
+
+---
+
+## Langkah 14 — Pemisahan Dashboard dan Workspace Transaksi
+
+**Tanggal:** 24 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Membuat halaman Dashboard berhenti pada footer seperti `dashboardmenu.png`, tanpa panel transaksi dan event tambahan di bawahnya.
+
+**Perubahan**
+
+- Menghapus panel Payment, Transaction Status, Contract Record, dan Live Activity Feed dari tampilan Dashboard utama.
+- Menghapus blok About lama yang duplikat.
+- Mempertahankan footer sebagai elemen terakhir Dashboard.
+- Panel transaksi dan event hanya dirender ketika menu Send Payment atau Activity Feed dipilih.
+- Menunda proses scroll sampai workspace tujuan selesai dirender agar tombol navigasi tetap berfungsi.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus tanpa error.
+- `npm run build`: lulus; compilation dan static generation berhasil.
+
+**Risiko/catatan**
+
+- Fitur transaksi dan event tidak dihapus dari aplikasi; fitur hanya dipisahkan dari halaman Dashboard.
+
+---
+
+## Langkah 15 — Penyempurnaan Proporsi dan Animasi Dashboard
+
+**Tanggal:** 24 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Mendekatkan proporsi dashboard ke `dashboardmenu.png` dan menambahkan animasi ringan tanpa mengganggu penggunaan aplikasi.
+
+**Perubahan**
+
+- Menyesuaikan sidebar menjadi 258px dan topbar menjadi 76px seperti komposisi referensi.
+- Menyesuaikan grid hero, ukuran heading, lebar kartu contract, dan jarak konten.
+- Menampilkan kartu `Not Connected` di sidebar sebelum wallet tersambung.
+- Membuat kartu akun sidebar dapat membuka multi-wallet selector.
+- Menyesuaikan urutan tombol theme dan notification pada topbar.
+- Menambahkan animasi fade-up bertahap pada hero dan kartu dashboard.
+- Menambahkan floating animation pada Stellar coin dan pergerakan orbit.
+- Menambahkan pulse animation pada status Stellar Testnet dan titik orbit.
+- Menambahkan hover elevation pada kartu dan tombol fitur.
+- Menambahkan fallback `prefers-reduced-motion` untuk aksesibilitas.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus tanpa error.
+- `npm run build`: lulus; compilation, type checking, dan static generation berhasil.
+
+**Risiko/catatan**
+
+- Animasi sengaja dibuat ringan agar dashboard tetap nyaman dan tidak mengganggu pembacaan data.
+
+---
+
+## Langkah 16 — Perbaikan Tombol Connect Wallet Navbar
+
+**Tanggal:** 24 Juli 2026
+**Status:** SELESAI
+
+**Penyebab**
+
+Handler `connectWallet` menerima event klik React sebagai parameter `walletId`. Akibatnya event tersebut dapat diproses sebagai ID wallet dan modal pemilihan wallet tidak berjalan sesuai harapan.
+
+**Perubahan**
+
+- Membungkus handler navbar dengan fungsi tanpa parameter.
+- Memastikan klik `Connect Wallet` selalu menjalankan `connectWallet()` tanpa event.
+- Alur pertama sekarang membuka modal multi-wallet; pemilihan wallet di dalam modal baru meneruskan ID wallet yang benar.
+
+**Verifikasi**
+
+- TypeScript type-check: lulus.
+- `npm run build`: lulus; compilation dan static generation berhasil.
