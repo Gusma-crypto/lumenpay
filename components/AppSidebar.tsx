@@ -92,7 +92,7 @@ export function AppSidebar({ activeSection, isOpen, isCollapsed, onClose, onTogg
       </aside>
 
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
-        {navItems.filter((item) => ["dashboard", "send-payment", "activity", "wallets", "settings"].includes(item.id)).map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <button
@@ -102,7 +102,15 @@ export function AppSidebar({ activeSection, isOpen, isCollapsed, onClose, onTogg
               onClick={() => onNavigate(item.id)}
             >
               <Icon size={19} />
-              <span>{item.id === "send-payment" ? "Send" : item.id === "wallets" ? "Wallets" : item.label.replace(" Feed", "")}</span>
+              <span>
+                {item.id === "send-payment"
+                  ? "Send"
+                  : item.id === "activity"
+                    ? "Activity"
+                    : item.id === "wallets"
+                      ? "Wallets"
+                      : item.label}
+              </span>
             </button>
           );
         })}

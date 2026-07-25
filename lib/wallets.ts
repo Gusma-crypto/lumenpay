@@ -69,8 +69,9 @@ export async function restoreWallet(walletId: string) {
     throw new Error(`${selected.name} was not found. Install or open the wallet, then try again.`);
   }
 
+  const { address } = await kit.fetchAddress();
   const network = await kit.getNetwork();
-  return { network, walletId, walletName: selected?.name ?? walletId };
+  return { address, network, walletId, walletName: selected?.name ?? walletId };
 }
 
 export async function getWalletNetwork() {

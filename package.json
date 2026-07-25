@@ -4,7 +4,8 @@
   "private": true,
   "description": "LumenPay Lite - a multi-wallet Stellar Testnet payment tracker for Yellow Belt Level 2.",
   "scripts": {
-    "dev": "WATCHPACK_POLLING=true WATCHPACK_POLLING_INTERVAL=1000 next dev -H 127.0.0.1 -p 3001",
+    "dev": "next dev -H 127.0.0.1 -p 3001",
+    "dev:poll": "set WATCHPACK_POLLING=true&& set WATCHPACK_POLLING_INTERVAL=1000&& next dev -H 127.0.0.1 -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."

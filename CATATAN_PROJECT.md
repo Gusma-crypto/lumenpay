@@ -36,6 +36,7 @@ Menambahkan multi-wallet, contract integration, live events, dan transaction sta
 
 - `npx tsc --noEmit --incremental false`: lulus.
 - `npm run build`: lulus.
+
 - `cargo test --locked`: 1 test lulus.
 
 **Risiko/catatan**
@@ -522,3 +523,223 @@ Handler `connectWallet` menerima event klik React sebagai parameter `walletId`. 
 
 - TypeScript type-check: lulus.
 - `npm run build`: lulus; compilation dan static generation berhasil.
+
+---
+
+## Langkah 17 — Network Error, Statistik Contract, dan Session Restore
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menindaklanjuti hasil code review pada error handling wallet, akurasi statistik on-chain, dan keamanan pemulihan sesi wallet.
+
+**Perubahan**
+
+- Membungkus pemeriksaan wallet network pada tahap review dan send dengan `try/catch`.
+- Menampilkan transaction error dan notification ketika wallet terkunci, disconnect, menolak request, atau gagal membaca network.
+- Menambahkan query read-only `get_payment_count()` melalui simulasi Soroban RPC.
+- Menggunakan contract payment count untuk Total Records, Total Payments Recorded, dan Total Events.
+- Mengubah volume menjadi `Synchronized Volume` karena nilainya berasal dari event contract yang tersedia pada rentang sinkronisasi RPC.
+- Mengubah `restoreWallet()` agar mengambil address aktif dari wallet extension.
+- Menandai sesi sebagai connected hanya setelah address dan network berhasil diverifikasi.
+- Memperbarui session storage menggunakan address aktif yang terverifikasi.
+- Membersihkan public key, wallet metadata, network, dan session storage jika restore gagal.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus.
+- `npm run lint`: lulus.
+- `cargo test`: 5/5 contract tests lulus.
+- `npm run build`: lulus; compilation dan static generation berhasil.
+
+**Risiko/catatan**
+
+- Soroban event endpoint memakai rentang ledger terbaru, sehingga volume diberi label synchronized dan bukan lifetime total.
+- Warning bundler `sodium-native` dan konfigurasi plugin Next.js ESLint tetap non-blocking.
+
+---
+
+## Langkah 18 — Perbaikan Overflow Wallet dan Tech Stack
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Memperbaiki elemen yang keluar dari card pada halaman Wallets dan About serta menyamakan skala font dengan dashboard.
+
+**Perubahan**
+
+- Memindahkan badge `Recommended` ke dalam kolom informasi Freighter.
+- Menyederhanakan grid header wallet agar icon, teks, dan arrow tidak saling menimpa.
+- Menambahkan `min-width: 0`, wrapping, dan overflow protection pada card wallet.
+- Memastikan tombol Connect selalu memakai lebar maksimal card.
+- Menurunkan ukuran font wallet menjadi skala 11–14px yang konsisten dengan dashboard.
+- Menyembunyikan arrow dekoratif ketika card memiliki selected mark.
+- Menambahkan wrapping pada nama dan deskripsi Tech Stack.
+- Menambahkan batas lebar internal serta overflow protection pada setiap Tech Stack card.
+- Menyesuaikan font Tech Stack menjadi 10–12px.
+
+**Verifikasi**
+
+- `npm run build`: lulus.
+- `npx tsc --noEmit --incremental false`: lulus.
+- `npm run lint`: lulus.
+
+**Risiko/catatan**
+
+- Warning bundler Stellar SDK dan konfigurasi plugin Next.js ESLint tetap non-blocking.
+
+---
+
+## Langkah 19 — Penyederhanaan Popup Connect Wallet
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menghilangkan informasi pembuka yang tidak diperlukan agar popup Connect Wallet lebih ringkas.
+
+**Perubahan**
+
+- Menghapus judul `Multi-wallet Connection`.
+- Menghapus deskripsi StellarWalletsKit dari bagian atas popup.
+- Menghapus kartu `Wallet Security`.
+- Menghapus kartu `Network Status`.
+- Menghapus kartu `Payment Asset`.
+- Mempertahankan status koneksi, daftar pilihan wallet, informasi Testnet setelah connected, dan tombol disconnect.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus.
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+
+## Langkah 20 — Deteksi Testnet dan Mainnet pada Popup Wallet
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menampilkan network wallet yang sebenarnya dan memberikan peringatan ketika network tidak sesuai dengan Stellar Testnet yang digunakan aplikasi.
+
+**Perubahan**
+
+- Menambahkan konstanta passphrase Stellar Mainnet.
+- Mendeteksi Testnet dan Mainnet menggunakan network passphrase, bukan hanya nama tampilan.
+- Menambahkan badge Testnet atau Mainnet pada status connected.
+- Mengubah icon dan warna status menjadi peringatan ketika Mainnet atau network lain terdeteksi.
+- Menampilkan pesan bahwa transaksi LumenPay Lite dikonfigurasi untuk Stellar Testnet.
+- Menampilkan notification segera setelah connect atau restore session jika Mainnet terdeteksi.
+- Menambahkan notification hasil pemeriksaan ulang network.
+- Mempertahankan panduan `Switch to Testnet` untuk pengguna Mainnet.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus.
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+
+---
+
+## Langkah 21 — Perbaikan Dev Command Windows
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Penyebab**
+
+Script `dev` memakai format environment variable Linux/macOS (`WATCHPACK_POLLING=true command`) yang tidak dikenali oleh `cmd.exe` pada Windows.
+
+**Perubahan**
+
+- Mengubah `npm run dev` menjadi command Next.js yang kompatibel lintas platform.
+- Menambahkan `npm run dev:poll` khusus Windows jika project pada drive `Z:` membutuhkan polling watcher.
+
+**Command**
+
+- Normal: `npm run dev`
+- Polling Windows: `npm run dev:poll`
+
+**Verifikasi**
+
+- `npm run dev`: Next.js berhasil start di `http://127.0.0.1:3001`.
+
+---
+
+## Langkah 22 — Bottom Navbar Mobile dan Back to Home
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Membuat seluruh menu mudah diakses dari smartphone dan menyediakan navigasi kembali ke Dashboard.
+
+**Perubahan**
+
+- Menampilkan tujuh menu pada bottom navbar: Dashboard, Send, Activity, Wallets, Contracts, Settings, dan About.
+- Menyesuaikan grid bottom navbar menjadi tujuh kolom.
+- Memendekkan label Send, Activity, dan Wallets.
+- Menyembunyikan label pada layar maksimal 390px agar semua icon tetap muat.
+- Mempertahankan bottom navbar pada halaman Send Payment.
+- Mengganti karakter panah halaman Send dengan icon `ArrowLeft`.
+- Menambahkan tombol `Back to Home` pada Activity, Wallets, Contracts, Settings, dan About.
+- Menambahkan ruang bawah pada halaman Send agar konten tidak tertutup navbar.
+
+**Verifikasi**
+
+- `npx tsc --noEmit --incremental false`: lulus.
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+
+---
+
+## Langkah 23 — Menonaktifkan Collapse Sidebar Mobile
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menghilangkan kontrol collapse sidebar ketika aplikasi dibuka melalui smartphone atau perangkat sentuh.
+
+**Perubahan**
+
+- Menyembunyikan tombol collapse secara paksa pada viewport mobile.
+- Menonaktifkan pointer event tombol collapse.
+- Menerapkan perlindungan tambahan hingga 1024px untuk perangkat tanpa hover.
+- Mempertahankan hamburger untuk membuka sidebar dan tombol X untuk menutupnya.
+- Fitur collapse desktop tetap tersedia.
+
+**Verifikasi**
+
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+
+---
+
+## Langkah 24 — Menghapus Icon Toggle pada Perangkat Sentuh
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Memastikan icon toggle/collapse sidebar tidak muncul ketika aplikasi dibuka melalui smartphone.
+
+**Perubahan**
+
+- Mendeteksi perangkat tanpa hover dan perangkat dengan pointer sentuh.
+- Menyembunyikan icon toggle menggunakan `display`, `visibility`, ukuran nol, dan pointer protection.
+- Tidak bergantung hanya pada lebar viewport sehingga berlaku pada smartphone portrait maupun landscape.
+- Hamburger pembuka sidebar dan tombol X tetap dipertahankan.
+
+**Verifikasi**
+
+- `npm run lint`: lulus.
+- `npm run build`: lulus.

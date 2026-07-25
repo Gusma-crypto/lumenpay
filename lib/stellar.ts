@@ -13,6 +13,7 @@ export const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
 
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
+export const MAINNET_PASSPHRASE = Networks.PUBLIC;
 export const ESTIMATED_FEE_XLM = (Number(BASE_FEE) / 10_000_000).toFixed(5);
 
 export const server = new Horizon.Server(HORIZON_URL);

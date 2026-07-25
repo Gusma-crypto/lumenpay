@@ -1974,7 +1974,9 @@ body {
   border: 1px solid #e0e4ef;
   border-radius: 12px;
   background: rgba(255, 255, 255, .97);
-  padding: 22px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 18px;
   box-shadow: 0 8px 25px rgba(47, 42, 99, .035);
 }
 
@@ -1998,47 +2000,72 @@ body {
   filter: grayscale(.18);
 }
 
-.wallet-card-head img,
-.more-wallet-icon {
-  width: 56px;
-  height: 56px;
+.wallet-card-head img {
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
   object-fit: cover;
 }
 
+.more-wallet-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+}
+
 .wallet-card-head {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) auto auto;
+  grid-template-columns: 52px minmax(0, 1fr) 14px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+.wallet-card-head > div {
+  min-width: 0;
 }
 
 .wallet-card-head h3,
 .wallet-card-head span {
   display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .wallet-card-head h3 {
   margin-top: 0;
+  font-size: 14px;
+  line-height: 1.25;
 }
 
 .wallet-card-head span {
-  margin-top: 5px;
+  margin-top: 4px;
   color: #5d6685;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
+  line-height: 1.35;
 }
 
-.wallet-card-head > small {
-  margin-top: 0;
+.wallet-card-head div > small {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 5px;
   background: #f0edff;
+  padding: 3px 7px;
   color: #4329e8;
+  font-size: 10px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .wallet-card-head > b {
   color: #4329e8;
   font-size: 24px;
   line-height: 1;
+}
+
+.wallet-choice-card.featured .wallet-card-head > b,
+.wallet-choice-card.connected .wallet-card-head > b {
+  visibility: hidden;
 }
 
 .more-wallet-icon {
@@ -2051,15 +2078,16 @@ body {
 .wallet-choice-card h3 {
   margin-top: 14px;
   color: #11163d;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 850;
 }
 
 .wallet-choice-card p {
   margin-top: 8px;
   color: #4e5a7c;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .wallet-choice-card small {
@@ -2080,13 +2108,21 @@ body {
 }
 
 .wallet-choice-card > button {
+  width: 100%;
+  max-width: 100%;
   min-height: 38px;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   border: 1px solid #dbe1ef;
   border-radius: 8px;
   background: white;
+  padding: 0 12px;
   color: #4329e8;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wallet-choice-card.featured > button {
@@ -3110,6 +3146,12 @@ body {
   border-radius: 10px;
   background: #fbfcff;
   padding: 0 14px;
+  overflow: hidden;
+}
+
+.tech-stack-grid article > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tech-stack-grid span {
@@ -3127,18 +3169,23 @@ body {
 .tech-stack-grid strong,
 .tech-stack-grid small {
   display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .tech-stack-grid strong {
   color: #11163d;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 850;
+  line-height: 1.25;
 }
 
 .tech-stack-grid small {
   margin-top: 3px;
   color: #5b6684;
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.3;
 }
 
 .about-project-card {
@@ -4314,7 +4361,8 @@ body {
   .dashboard-about a { transition: none; }
 }
 
-.mobile-bottom-nav { display: none; }
+.mobile-bottom-nav,
+.mobile-back-home { display: none; }
 
 @media (max-width: 1180px) {
   .dashboard-hero { grid-template-columns: 1.2fr .8fr; }
@@ -4500,14 +4548,29 @@ body {
     inset: auto 0 0;
     z-index: 50;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     border-top: 1px solid #e0e3ee;
     background: rgba(255,255,255,.96);
-    padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+    padding: 7px 5px max(7px, env(safe-area-inset-bottom));
     backdrop-filter: blur(18px);
   }
-  .mobile-bottom-nav button { display: grid; justify-items: center; gap: 3px; color: #69718e; font-size: 9px; }
+  .mobile-bottom-nav button { display: grid; min-width: 0; justify-items: center; gap: 3px; color: #69718e; font-size: 8px; }
   .mobile-bottom-nav button.active { color: #5135e9; }
+  .mobile-back-home {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 16px;
+    border: 1px solid #dfe3ef;
+    border-radius: 9px;
+    background: #fff;
+    padding: 0 12px;
+    color: #4932e9;
+    font-size: 12px;
+    font-weight: 750;
+    box-shadow: 0 6px 18px rgba(47,42,99,.05);
+  }
 }
 
 @media (max-width: 480px) {
@@ -4728,14 +4791,13 @@ body {
     align-items: start;
   }
 
-  .send-mobile-mode .app-topbar,
-  .send-mobile-mode .mobile-bottom-nav {
+  .send-mobile-mode .app-topbar {
     display: none;
   }
 
   .send-mobile-mode .dashboard-content {
     min-height: 100vh;
-    padding: 28px 22px 34px;
+    padding: 28px 22px 105px;
     background: #ffffff;
   }
 
@@ -5126,7 +5188,9 @@ body {
   }
 
   .sidebar-collapse-toggle {
-    display: none;
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .sidebar-collapsed .sidebar-brand {
@@ -5261,16 +5325,16 @@ body {
   }
 
   .mobile-bottom-nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 3px;
-    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
+    padding: 7px 5px max(7px, env(safe-area-inset-bottom));
   }
 
   .mobile-bottom-nav button {
     min-width: 0;
     min-height: 54px;
     align-content: center;
-    border-radius: 13px;
+    border-radius: 10px;
     font-weight: 750;
   }
 
@@ -5590,5 +5654,32 @@ body {
 
   .stat-card span {
     font-size: 8px;
+  }
+
+  .mobile-bottom-nav button span {
+    display: none;
+  }
+
+  .mobile-bottom-nav button {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 1024px) and (hover: none) {
+  .sidebar-collapse-toggle {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .sidebar-collapse-toggle {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
 }

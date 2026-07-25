@@ -1,4 +1,5 @@
 import {
+  Account,
   Address,
   BASE_FEE,
   Contract,
@@ -81,6 +82,36 @@ export async function submitContractTransaction(signedXdr: string) {
   }
 
   throw new Error("The contract transaction is still pending. Check its hash in Stellar Expert.");
+}
+
+export async function fetchPaymentCount() {
+  if (!CONTRACT_CONFIGURED) {
+    return 0;
+  }
+
+  const simulationSource = new Account(
+    "GCT45UYJ2KR2ILNHOBCKGJ25HA42QLWLPNOTP7JFFTEMM46RADJXGMKV",
+    "0"
+  );
+  const contract = new Contract(TRACKER_CONTRACT_ID);
+  const transaction = new TransactionBuilder(simulationSource, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE
+  })
+    .addOperation(contract.call("get_payment_count"))
+    .setTimeout(30)
+    .build();
+  const simulation = await rpcServer.simulateTransaction(transaction);
+
+  if (rpc.Api.isSimulationError(simulation) || !simulation.result) {
+    throw new Error(
+      rpc.Api.isSimulationError(simulation)
+        ? `Unable to read contract payment count: ${simulation.error}`
+        : "Contract payment count did not return a value."
+    );
+  }
+
+  return Number(scValToNative(simulation.result.retval));
 }
 
 function decodeEventValue(value: unknown) {

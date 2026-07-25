@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   Box,
   CheckCircle2,
   ClipboardCheck,
@@ -48,6 +49,7 @@ import {
   CONTRACT_CONFIGURED,
   ContractCallStatus,
   ContractPaymentEvent,
+  fetchPaymentCount,
   fetchPaymentEvents,
   submitContractTransaction,
   TRACKER_CONTRACT_ID
@@ -58,6 +60,7 @@ import {
   fetchAccountBalances,
   fetchPaymentHistory,
   getStellarErrorMessage,
+  MAINNET_PASSPHRASE,
   NETWORK_PASSPHRASE,
   PaymentHistoryItem,
   submitSignedTransaction
@@ -162,6 +165,7 @@ export default function Home() {
   const [walletName, setWalletName] = useState<string | null>(null);
   const [connectedWalletId, setConnectedWalletId] = useState<string | null>(null);
   const [contractEvents, setContractEvents] = useState<ContractPaymentEvent[]>([]);
+  const [contractPaymentCount, setContractPaymentCount] = useState(0);
   const [contractError, setContractError] = useState<string | null>(null);
   const [contractStatus, setContractStatus] = useState<ContractCallStatus>("idle");
   const [_contractHash, setContractHash] = useState<string | null>(null);
@@ -182,6 +186,7 @@ export default function Home() {
   const isConnected = walletStatus === "connected" && Boolean(publicKey);
   const isSubmitting = transactionResult.status === "signing" || transactionResult.status === "submitting";
   const isFreighterTestnet = freighterNetworkPassphrase === NETWORK_PASSPHRASE;
+  const isFreighterMainnet = freighterNetworkPassphrase === MAINNET_PASSPHRASE;
   const isSendPaymentPage = activeSection === "send-payment";
   const isActivityPage = activeSection === "activity";
   const isWalletPage = activeSection === "wallets";
@@ -243,6 +248,10 @@ export default function Home() {
     : activityRows;
   const activityPendingCount = contractStatus === "pending" || isSubmitting ? 1 : 0;
   const activityFailedCount = contractStatus === "failed" || transactionResult.status === "error" ? 1 : 0;
+  const synchronizedContractVolume = contractEvents.reduce(
+    (total, event) => total + (Number(event.amount) || 0),
+    0
+  );
 
   function showNotification(type: AppNotification["type"], title: string, message: string) {
     setNotification({
@@ -392,22 +401,43 @@ export default function Home() {
       return;
     }
 
-    setPublicKey(storedSession.address);
-    setWalletName(storedSession.walletName);
-    setConnectedWalletId(storedSession.walletId);
-    setWalletStatus("connected");
+    setWalletStatus("connecting");
+    setWalletError(null);
 
     void restoreWallet(storedSession.walletId)
       .then((connection) => {
+        setPublicKey(connection.address);
         setWalletName(connection.walletName);
+        setConnectedWalletId(connection.walletId);
         setFreighterNetwork(connection.network.network);
         setFreighterNetworkPassphrase(connection.network.networkPassphrase);
         setWalletStatus("connected");
+        window.localStorage.setItem(
+          STORED_WALLET_KEY,
+          JSON.stringify({
+            address: connection.address,
+            walletId: connection.walletId,
+            walletName: connection.walletName
+          } satisfies StoredWalletSession)
+        );
+        if (connection.network.networkPassphrase === MAINNET_PASSPHRASE) {
+          showNotification(
+            "warning",
+            "Mainnet Terdeteksi",
+            "LumenPay Lite menggunakan Stellar Testnet. Ganti network wallet ke Testnet sebelum mengirim transaksi."
+          );
+        }
       })
       .catch((error) => {
         const message = getWalletErrorMessage(error);
+        setPublicKey(null);
+        setWalletName(null);
+        setConnectedWalletId(null);
+        setFreighterNetwork(null);
+        setFreighterNetworkPassphrase(null);
         setWalletStatus("error");
         setWalletError(message);
+        window.localStorage.removeItem(STORED_WALLET_KEY);
         showNotification("warning", "Session Wallet Tidak Aktif", message);
       });
   }, []);
@@ -415,13 +445,19 @@ export default function Home() {
   const refreshContractEvents = useCallback(async () => {
     if (!CONTRACT_CONFIGURED) {
       setContractEvents([]);
+      setContractPaymentCount(0);
       setContractStatus("skipped");
       return;
     }
 
     setIsContractLoading(true);
     try {
-      setContractEvents(await fetchPaymentEvents());
+      const [events, paymentCount] = await Promise.all([
+        fetchPaymentEvents(),
+        fetchPaymentCount()
+      ]);
+      setContractEvents(events);
+      setContractPaymentCount(paymentCount);
       setContractError(null);
     } catch (error) {
       setContractError(error instanceof Error ? error.message : "Unable to synchronize contract events.");
@@ -472,7 +508,15 @@ export default function Home() {
           walletName: connection.walletName
         } satisfies StoredWalletSession)
       );
-      showNotification("success", "Wallet Connected", `${connection.walletName} berhasil terkoneksi ke Stellar Testnet.`);
+      if (connection.network.networkPassphrase === NETWORK_PASSPHRASE) {
+        showNotification("success", "Wallet Connected", `${connection.walletName} berhasil terkoneksi ke Stellar Testnet.`);
+      } else {
+        showNotification(
+          "warning",
+          connection.network.networkPassphrase === MAINNET_PASSPHRASE ? "Mainnet Terdeteksi" : "Network Tidak Didukung",
+          `Wallet berada di ${connection.network.network ?? "network lain"}. Ganti ke Stellar Testnet sebelum mengirim transaksi.`
+        );
+      }
     } catch (error) {
       const message = getWalletErrorMessage(error);
       setPublicKey(null);
@@ -508,6 +552,7 @@ export default function Home() {
     setContractHash(null);
     setContractError(null);
     setContractEvents([]);
+    setContractPaymentCount(0);
     setContractStatus(CONTRACT_CONFIGURED ? "idle" : "skipped");
   }
 
@@ -518,11 +563,18 @@ export default function Home() {
       setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
 
       if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
-        setTransactionResult({ status: "error", message: "Switch the connected wallet to Testnet." });
+        const detectedNetwork =
+          networkDetails.networkPassphrase === MAINNET_PASSPHRASE
+            ? "Mainnet"
+            : networkDetails.network ?? "network yang tidak didukung";
+        const message = `Wallet berada di ${detectedNetwork}. Ganti network wallet ke Stellar Testnet.`;
+        setTransactionResult({ status: "error", message });
+        showNotification("warning", "Network Tidak Sesuai", message);
         return;
       }
 
       setTransactionResult({ status: "idle" });
+      showNotification("success", "Testnet Aktif", "Wallet sudah terhubung ke Stellar Testnet.");
     } catch (error) {
       setTransactionResult({
         status: "error",
@@ -537,42 +589,48 @@ export default function Home() {
       return;
     }
 
-    const networkDetails = await getWalletNetwork();
-    setFreighterNetwork(networkDetails.network);
-    setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
+    try {
+      const networkDetails = await getWalletNetwork();
+      setFreighterNetwork(networkDetails.network);
+      setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
 
-    if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
-      setTransactionResult({
-        status: "error",
-        message: "Switch the connected wallet to Testnet."
-      });
-      return;
+      if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
+        setTransactionResult({
+          status: "error",
+          message: "Switch the connected wallet to Testnet."
+        });
+        return;
+      }
+
+      const recipientError = validateRecipientAddress(destinationPublicKey);
+      if (recipientError) {
+        setTransactionResult({ status: "error", message: recipientError });
+        return;
+      }
+
+      if (destinationPublicKey.trim().toUpperCase() === publicKey.trim().toUpperCase()) {
+        setTransactionResult({ status: "error", message: "You cannot send XLM to your own wallet address." });
+        return;
+      }
+
+      const amountError = validateAmount(amount, balance);
+      if (amountError) {
+        setTransactionResult({ status: "error", message: amountError });
+        return;
+      }
+
+      if (new TextEncoder().encode(memo.trim()).length > 28) {
+        setTransactionResult({ status: "error", message: "Memo can use up to 28 bytes." });
+        return;
+      }
+
+      setPendingPayment({ recipient: destinationPublicKey.trim(), amount: amount.trim(), memo: memo.trim() });
+      showNotification("form", "Form Pembayaran Siap", "Detail pembayaran sudah valid. Review transaksi sebelum menandatangani.");
+    } catch (error) {
+      const message = getWalletErrorMessage(error);
+      setTransactionResult({ status: "error", message });
+      showNotification("warning", "Wallet Network Error", message);
     }
-
-    const recipientError = validateRecipientAddress(destinationPublicKey);
-    if (recipientError) {
-      setTransactionResult({ status: "error", message: recipientError });
-      return;
-    }
-
-    if (destinationPublicKey.trim().toUpperCase() === publicKey.trim().toUpperCase()) {
-      setTransactionResult({ status: "error", message: "You cannot send XLM to your own wallet address." });
-      return;
-    }
-
-    const amountError = validateAmount(amount, balance);
-    if (amountError) {
-      setTransactionResult({ status: "error", message: amountError });
-      return;
-    }
-
-    if (new TextEncoder().encode(memo.trim()).length > 28) {
-      setTransactionResult({ status: "error", message: "Memo can use up to 28 bytes." });
-      return;
-    }
-
-    setPendingPayment({ recipient: destinationPublicKey.trim(), amount: amount.trim(), memo: memo.trim() });
-    showNotification("form", "Form Pembayaran Siap", "Detail pembayaran sudah valid. Review transaksi sebelum menandatangani.");
   }
 
   async function sendPayment(destinationPublicKey: string, amount: string, memo: string) {
@@ -581,21 +639,21 @@ export default function Home() {
       return;
     }
 
-    const networkDetails = await getWalletNetwork();
-    setFreighterNetwork(networkDetails.network);
-    setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
-
-    if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
-      setTransactionResult({ status: "error", message: "Switch the connected wallet to Testnet." });
-      return;
-    }
-
-    if (destinationPublicKey.trim().toUpperCase() === publicKey.trim().toUpperCase()) {
-      setTransactionResult({ status: "error", message: "You cannot send XLM to your own wallet address." });
-      return;
-    }
-
     try {
+      const networkDetails = await getWalletNetwork();
+      setFreighterNetwork(networkDetails.network);
+      setFreighterNetworkPassphrase(networkDetails.networkPassphrase);
+
+      if (networkDetails.networkPassphrase !== NETWORK_PASSPHRASE) {
+        setTransactionResult({ status: "error", message: "Switch the connected wallet to Testnet." });
+        return;
+      }
+
+      if (destinationPublicKey.trim().toUpperCase() === publicKey.trim().toUpperCase()) {
+        setTransactionResult({ status: "error", message: "You cannot send XLM to your own wallet address." });
+        return;
+      }
+
       setTransactionResult({ status: "signing", message: `Waiting for ${walletName ?? "wallet"} approval...` });
 
       const transaction = await buildXlmPaymentTransaction({
@@ -718,10 +776,19 @@ export default function Home() {
       />
 
       <div className={`dashboard-content ${isSendPaymentPage || isActivityPage || isWalletPage || isContractPage || isSettingsPage ? "send-only-content" : ""}`}>
+        {activeSection !== "dashboard" && !isSendPaymentPage ? (
+          <button className="mobile-back-home" type="button" onClick={() => navigateTo("dashboard")}>
+            <ArrowLeft size={18} aria-hidden="true" />
+            Back to Home
+          </button>
+        ) : null}
+
         {isSendPaymentPage ? (
           <section className="send-page" id="send-payment">
             <div className="send-mobile-header">
-              <button type="button" onClick={() => navigateTo("dashboard")} aria-label="Back to dashboard">←</button>
+              <button type="button" onClick={() => navigateTo("dashboard")} aria-label="Back to home">
+                <ArrowLeft size={24} aria-hidden="true" />
+              </button>
               <h1>Send Payment</h1>
               <span><i /> Testnet</span>
             </div>
@@ -1021,8 +1088,8 @@ export default function Home() {
                           <div>
                             <h3>{wallet.name}</h3>
                             <span>{isRecommended ? "Browser Extension" : wallet.isAvailable ? "Stellar Wallet" : "Install Required"}</span>
+                            {isRecommended ? <small>Recommended</small> : null}
                           </div>
-                          {isRecommended ? <small>Recommended</small> : null}
                           <b aria-hidden="true">›</b>
                         </div>
                         <div>
@@ -1174,7 +1241,7 @@ export default function Home() {
                   <i className="green"><Coins size={27} aria-hidden="true" /></i>
                   <div>
                     <span>Total Records</span>
-                    <strong>{contractEvents.length}</strong>
+                    <strong>{contractPaymentCount}</strong>
                     <small>Payment records</small>
                   </div>
                 </article>
@@ -1182,7 +1249,7 @@ export default function Home() {
                   <i className="orange"><Radio size={27} aria-hidden="true" /></i>
                   <div>
                     <span>Total Events</span>
-                    <strong>{contractEvents.length}</strong>
+                    <strong>{contractPaymentCount}</strong>
                     <small>Events emitted</small>
                   </div>
                 </article>
@@ -1706,8 +1773,8 @@ export default function Home() {
               </button>
             </div>
             <div className="contract-counts">
-              <div><span>Total Records</span><strong>{paymentHistory.length}</strong></div>
-              <div><span>Total Events</span><strong>{contractEvents.length}</strong></div>
+              <div><span>Total Records</span><strong>{contractPaymentCount}</strong></div>
+              <div><span>Total Events</span><strong>{contractPaymentCount}</strong></div>
             </div>
             <a href={`https://stellar.expert/explorer/testnet/contract/${TRACKER_CONTRACT_ID}`} target="_blank" rel="noreferrer">
               <ExternalLink size={15} /> View on Stellar Expert
@@ -1718,15 +1785,15 @@ export default function Home() {
         <section className="stats-grid">
           {[
             { label: "Connected Wallets", value: isConnected ? 1 : 0, note: "This session", icon: Users, tone: "blue" },
-            { label: "Total Payments Recorded", value: paymentHistory.length, note: "On-chain", icon: Box, tone: "purple" },
+            { label: "Total Payments Recorded", value: contractPaymentCount, note: "From smart contract", icon: Box, tone: "purple" },
             {
-              label: "Total Volume Recorded",
-              value: `${paymentHistory.reduce((total, item) => total + (Number(item.amount) || 0), 0).toFixed(2)} XLM`,
-              note: "On-chain",
+              label: "Synchronized Volume",
+              value: `${synchronizedContractVolume.toFixed(2)} XLM`,
+              note: "Recent contract events",
               icon: Coins,
               tone: "green"
             },
-            { label: "Total Events", value: contractEvents.length, note: "From smart contract", icon: Radio, tone: "orange" }
+            { label: "Total Events", value: contractPaymentCount, note: "Emitted by contract", icon: Radio, tone: "orange" }
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -1874,6 +1941,7 @@ export default function Home() {
               error={walletError}
               networkName={freighterNetwork}
               isTestnet={isFreighterTestnet}
+              isMainnet={isFreighterMainnet}
               onRefreshNetwork={refreshFreighterNetwork}
               onConnect={connectWallet}
               onDisconnect={disconnectWallet}

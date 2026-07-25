@@ -13,6 +13,7 @@ type WalletPanelProps = {
   error: string | null;
   networkName: string | null;
   isTestnet: boolean;
+  isMainnet: boolean;
   onRefreshNetwork: () => void;
   onConnect: (walletId?: string) => void;
   onDisconnect: () => void;
@@ -27,51 +28,44 @@ export function WalletPanel(props: WalletPanelProps) {
   const [copyLabel, setCopyLabel] = useState("Copy");
   const isConnected = props.status === "connected" && Boolean(props.publicKey);
   const isConnecting = props.status === "connecting";
-  const StatusIcon = isConnected ? CheckCircle2 : WifiOff;
-  const walletSecurityLabel = isConnected ? (props.walletName ?? "Wallet connected") : "Ready to connect";
-  const networkStatusLabel = isConnected ? (props.isTestnet ? "Testnet ready" : "Needs Testnet") : "Waiting for wallet";
+  const hasNetworkMismatch = isConnected && !props.isTestnet;
+  const StatusIcon = hasNetworkMismatch ? AlertTriangle : isConnected ? CheckCircle2 : WifiOff;
+  const currentNetworkLabel = props.isTestnet
+    ? "Testnet"
+    : props.isMainnet
+      ? "Mainnet"
+      : props.networkName ?? "Unknown";
 
   return (
     <section className="panel-card">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <p className="section-eyebrow">Wallet</p>
-          <h2 className="text-xl font-semibold text-ink">Multi-wallet Connection</h2>
-          <p className="mt-2 max-w-md text-sm leading-6 text-violet-100/70">
-            Connect with StellarWalletsKit, confirm Testnet, then use your preferred wallet to send XLM.
-          </p>
-        </div>
-        <div className="grid h-11 w-11 place-items-center rounded-lg border border-line/50 bg-cyan-400/10 text-cyan-300 shadow-sm">
-          <Wallet size={22} aria-hidden="true" />
-        </div>
-      </div>
-
-      <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
-          <p className="text-xs font-semibold uppercase text-violet-200/55">Wallet Security</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-100">{walletSecurityLabel}</p>
-        </div>
-        <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
-          <p className="text-xs font-semibold uppercase text-violet-200/55">Network Status</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-100">{networkStatusLabel}</p>
-        </div>
-        <div className="rounded-lg border border-line/45 bg-[#090a18] p-3">
-          <p className="text-xs font-semibold uppercase text-violet-200/55">Payment Asset</p>
-          <p className="mt-1 text-sm font-semibold text-cyan-100">Native XLM</p>
-        </div>
-      </div>
-
       <div className="mb-5 rounded-lg border border-line bg-paper p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-violet-200/70">Status</p>
-            <p className="mt-1 text-base font-semibold text-ink">
-              {isConnected ? "Connected" : isConnecting ? "Connecting..." : "Disconnected"}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="text-base font-semibold text-ink">
+                {isConnected ? "Connected" : isConnecting ? "Connecting..." : "Disconnected"}
+              </p>
+              {isConnected ? (
+                <span
+                  className={`rounded-md px-2 py-1 text-xs font-bold ${
+                    props.isTestnet
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {currentNetworkLabel}
+                </span>
+              ) : null}
+            </div>
           </div>
           <div
             className={`grid h-10 w-10 place-items-center rounded-lg ${
-              isConnected ? "bg-cyan-400/15 text-cyan-300" : "bg-violet-400/10 text-violet-200"
+              hasNetworkMismatch
+                ? "bg-amber-100 text-amber-700"
+                : isConnected
+                  ? "bg-cyan-400/15 text-cyan-300"
+                  : "bg-violet-400/10 text-violet-200"
             }`}
           >
             <StatusIcon size={19} aria-hidden="true" />
@@ -163,9 +157,15 @@ export function WalletPanel(props: WalletPanelProps) {
             <AlertTriangle className="mt-0.5 shrink-0" size={17} aria-hidden="true" />
           )}
           <div>
-            <p className="font-semibold">{props.isTestnet ? "Wallet is on Testnet" : "Switch wallet to Testnet"}</p>
+            <p className="font-semibold">
+              {props.isTestnet
+                ? "Wallet connected to Testnet"
+                : props.isMainnet
+                  ? "Mainnet detected — switch wallet to Testnet"
+                  : "Unsupported network — switch wallet to Testnet"}
+            </p>
             <p className="mt-1 text-violet-100/70">
-              Current network: {props.networkName ?? "Unknown"}
+              Current network: {currentNetworkLabel}. LumenPay Lite transactions are configured for Stellar Testnet.
             </p>
             {!props.isTestnet ? (
               <button
