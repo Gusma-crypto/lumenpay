@@ -8,6 +8,7 @@ import {
   Box,
   CheckCircle2,
   ClipboardCheck,
+  Code2,
   Coins,
   Copy,
   ExternalLink,
@@ -807,7 +808,7 @@ export default function Home() {
               {[
                 { step: 1, label: "Input" },
                 { step: 2, label: "Review" },
-                { step: 3, label: "Sign & Send" },
+                { step: 3, label: "Sign" },
                 { step: 4, label: "Complete" }
               ].map((item) => (
                 <div
@@ -1454,20 +1455,19 @@ export default function Home() {
                 <h2>Tech Stack</h2>
                 <div className="tech-stack-grid">
                   {[
-                    ["Stellar SDK", "v11+"],
-                    ["Soroban", "Smart Contracts"],
-                    ["StellarWalletsKit", "Multi-Wallet"],
-                    ["Vue 3", "Frontend"],
-                    ["Vite", "Build Tool"]
-                  ].map(([name, note]) => (
-                    <article key={name}>
-                      <span>{name.slice(0, 1)}</span>
-                      <div>
-                        <strong>{name}</strong>
-                        <small>{note}</small>
-                      </div>
-                    </article>
-                  ))}
+                    { name: "Stellar SDK", icon: Sparkles },
+                    { name: "Soroban Smart Contract", icon: Box },
+                    { name: "StellarWalletsKit", icon: WalletCards },
+                    { name: "Next.js", icon: Monitor },
+                    { name: "TypeScript", icon: Code2 }
+                  ].map((technology) => {
+                    const TechnologyIcon = technology.icon;
+                    return (
+                      <article className="tech-icon-card" key={technology.name} title={technology.name} aria-label={technology.name}>
+                        <TechnologyIcon size={25} aria-hidden="true" />
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
 

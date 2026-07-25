@@ -743,3 +743,197 @@ Memastikan icon toggle/collapse sidebar tidak muncul ketika aplikasi dibuka mela
 
 - `npm run lint`: lulus.
 - `npm run build`: lulus.
+
+---
+
+## Langkah 25 — Menghapus Sidebar pada Versi Mobile
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menghapus seluruh sidebar ketika aplikasi dibuka melalui smartphone dan menggunakan bottom navbar sebagai navigasi utama.
+
+**Perubahan**
+
+- Menyembunyikan panel sidebar pada viewport maksimal 820px.
+- Menyembunyikan sidebar pada perangkat sentuh hingga 1024px untuk mode landscape.
+- Menghapus hamburger dan backdrop sidebar dari tampilan mobile.
+- Mempertahankan brand, network, dan wallet controls pada header mobile.
+- Menggunakan tujuh icon bottom navbar sebagai navigasi mobile.
+- Sidebar desktop tetap tersedia.
+
+**Verifikasi**
+
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+
+---
+
+## Langkah 26 — Optimasi Send Payment untuk Smartphone
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Memperkecil tampilan, font, dan progress Send Payment agar proporsional pada layar smartphone.
+
+**Perubahan**
+
+- Memperkecil heading mobile Send Payment menjadi 18px.
+- Memperkecil badge Testnet, tombol back, dan jarak header.
+- Memperkecil progress circle menjadi 30px dan label menjadi 10px.
+- Menyesuaikan garis progress dengan ukuran circle mobile.
+- Mengubah label tahap ketiga dari `Sign & Send` menjadi `Sign`.
+- Memperkecil padding card, icon Payment Details, judul, dan deskripsi.
+- Memperkecil wallet source card, status Connected, label form, input, serta bantuan validasi.
+- Memperkecil quick amount, memo, information note, Reset, dan Review Payment.
+- Menjaga ruang bawah agar form tidak tertutup bottom navbar.
+- Memperluas penghapusan sidebar dan aktivasi bottom navbar hingga 1024px.
+
+**Verifikasi**
+
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+
+---
+
+## Langkah 27 — Tech Stack Icon Only
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menyederhanakan bagian Tech Stack pada halaman About agar hanya menampilkan icon.
+
+**Perubahan**
+
+- Menghapus nama dan deskripsi yang terlihat dari card Tech Stack.
+- Menampilkan icon Stellar SDK, Soroban, StellarWalletsKit, Next.js, dan TypeScript.
+- Memperbarui daftar teknologi agar sesuai dengan implementasi project saat ini.
+- Menambahkan `title` dan `aria-label` pada setiap icon.
+- Menambahkan hover ringan tanpa menampilkan teks tambahan.
+
+**Verifikasi**
+
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+
+---
+
+## Langkah 28 — Tabel Bukti Screenshot README
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menambahkan pemetaan requirement Yellow Belt Level 2 ke screenshot bukti yang tersedia.
+
+**Perubahan**
+
+- Mengganti tabel screenshot lama dan pending screenshot dengan tabel bukti Level 2.
+- Menambahkan wallet options, connected wallet, contract deployment, contract call, contract read, transaction status, live feed, dan event synchronization.
+- Menyesuaikan ekstensi wallet connected menjadi `.jpeg`.
+- Menggunakan `contracts.png` untuk deployment dan read contract data.
+- Menggunakan `level2-live-feed.png` untuk live feed dan event synchronization.
+- Mengubah seluruh path menjadi tautan Markdown yang dapat diklik.
+- Menambahkan preview seluruh screenshot Level 2.
+- Menandai checklist Level 2 submission screenshots sebagai selesai.
+
+**Verifikasi**
+
+- Seluruh enam file screenshot yang dirujuk tersedia pada `public/screenshots`.
+- Tidak ada path screenshot Level 2 yang rusak pada tabel baru.
+
+---
+
+## Langkah 29 — Bukti Stellar Explorer
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menambahkan screenshot verifikasi Stellar Explorer pada dokumentasi submission.
+
+**Perubahan**
+
+- Menambahkan requirement `Stellar Explorer verification` pada tabel screenshot README.
+- Menautkan file `public/screenshots-yellow-belt1/explore.png`.
+- Menambahkan preview screenshot Explorer pada bagian Evidence Preview.
+
+**Verifikasi**
+
+- File Explorer tersedia dan path README valid.
+
+---
+
+## Langkah 30 — Bukti Contract Explorer
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Menambahkan screenshot Contract Explorer ke dokumentasi submission.
+
+**Perubahan**
+
+- Menambahkan requirement `Contract Explorer verification` pada tabel screenshot README.
+- Menautkan `public/screenshots/contract-explore.png`.
+- Menambahkan screenshot tersebut pada bagian Evidence Preview.
+- Memastikan kembali path Stellar Explorer memakai file `explore.png` yang tersedia.
+
+**Verifikasi**
+
+- File `contract-explore.png` tersedia dan path README valid.
+
+---
+
+## Langkah 31 — English Yellow Belt Submission Checklist
+
+**Tanggal:** 25 Juli 2026
+**Status:** SELESAI
+
+**Tujuan**
+
+Memperbarui `YELLOW_BELT_STEP_BY_STEP.md` menjadi panduan dan checklist submission berbahasa Inggris yang sesuai dengan kondisi project terbaru.
+
+**Perubahan**
+
+- Menulis ulang seluruh panduan dalam bahasa Inggris.
+- Memperbarui contract ID, deployment hash, CLI validation hash, live demo, dan contract record count.
+- Menandai implementasi multi-wallet, error handling, contract, event synchronization, status transaksi, tests, build, dan screenshots sebagai selesai.
+- Menjaga frontend contract transaction hash sebagai pending sampai hash tepat dicatat di README.
+- Menjaga commit/push screenshot dan live demo README sebagai pending.
+- Memperbarui command Windows `npm run dev` dan `npm run dev:poll`.
+- Menambahkan final audit dan ready-to-submit rules.
+
+**Verifikasi**
+
+- Tidak ada bagian panduan berbahasa Indonesia yang tersisa.
+- Checklist membedakan item teknis selesai dan bukti submission yang masih pending.
+
+## Langkah 32 — Live Demo dan Contract Explorer Link
+
+### Tujuan
+
+Melengkapi bukti submission Yellow Belt Level 2 dengan tautan deployment frontend dan halaman contract Testnet yang dapat diverifikasi.
+
+### Perubahan
+
+- Menambahkan live demo `https://lumenpay-flame.vercel.app/` pada bagian awal README dan Useful Links.
+- Membuat Contract ID menjadi tautan langsung ke halaman contract di Stellar Expert Testnet.
+- Menambahkan baris screenshot transaction status ke tabel evidence README.
+- Menandai checklist live demo, Contract Explorer link, dan transaction-status screenshot sebagai selesai.
+- Memperbarui `YELLOW_BELT_STEP_BY_STEP.md` agar status checklist sesuai dengan bukti terbaru.
+
+### Catatan
+
+- URL contract Stellar Expert adalah halaman contract, bukan hash transaksi individual.
+- Transaction hash frontend `record_payment` masih perlu diambil dari transaksi yang ditandatangani melalui wallet pada aplikasi.
+- `git diff --check` tidak menemukan whitespace error pada file panduan.

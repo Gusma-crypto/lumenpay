@@ -6,6 +6,10 @@ The app lets users connect a Stellar wallet, check Testnet XLM balance, send nat
 
 Version history is available in [CHANGELOG.md](CHANGELOG.md). The detailed submission guide is available in [YELLOW_BELT_STEP_BY_STEP.md](YELLOW_BELT_STEP_BY_STEP.md).
 
+## Live Demo
+
+[Open LumenPay Lite](https://lumenpay-flame.vercel.app/)
+
 ## Yellow Belt Scope
 
 ### Yellow Belt Level 1
@@ -216,7 +220,7 @@ Deployment values are intentionally not fabricated.
 
 | Evidence | Value |
 | --- | --- |
-| Testnet contract ID | `CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD` |
+| Testnet contract ID | [`CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD`](https://stellar.expert/explorer/testnet/contract/CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD) |
 | Deployment transaction | [`7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb`](https://stellar.expert/explorer/testnet/tx/7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb) |
 | Successful CLI `record_payment` validation | [`21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35`](https://stellar.expert/explorer/testnet/tx/21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35) |
 | Successful frontend `record_payment` | Pending frontend wallet evidence. Replace this with the transaction hash produced after sending a payment from the app and approving the `record_payment` wallet signature. |
@@ -258,40 +262,44 @@ contracts/
 
 ## Screenshots
 
-Available evidence screenshots:
+Level 2 evidence screenshots:
 
 | Requirement | File |
 | --- | --- |
-| Wallet connected state | `public/screenshots/wallet-connected.png` |
-| Balance displayed | `public/screenshots/balance-displayed.png` |
-| Successful Testnet transaction | `public/screenshots/transaction-success.png` |
-| Transaction result shown to the user | `public/screenshots/transaction-result.png` |
-| Explorer hash verification | `public/screenshots/explore.png` |
+| Wallet options (StellarWalletsKit) | [`public/screenshots/level2-wallet-options.png`](public/screenshots/level2-wallet-options.png) |
+| Multi-wallet connected | [`public/screenshots/level2-wallet-connected.jpeg`](public/screenshots/level2-wallet-connected.jpeg) |
+| Smart contract deployed | [`public/screenshots/contracts.png`](public/screenshots/contracts.png) |
+| Contract call success | [`public/screenshots/level2-contract-call.png`](public/screenshots/level2-contract-call.png) |
+| Read contract data | [`public/screenshots/contracts.png`](public/screenshots/contracts.png) |
+| Transaction status (Pending → Success → Failed) | [`public/screenshots/level2-transaction-status.png`](public/screenshots/level2-transaction-status.png) |
+| Live activity feed | [`public/screenshots/level2-live-feed.png`](public/screenshots/level2-live-feed.png) |
+| Contract event synchronization | [`public/screenshots/level2-live-feed.png`](public/screenshots/level2-live-feed.png) |
+| Stellar Explorer verification | [`public/screenshots-yellow-belt1/explore.png`](public/screenshots-yellow-belt1/explore.png) |
+| Contract Explorer verification | [`public/screenshots/contract-explore.png`](public/screenshots/contract-explore.png) |
 
-![Wallet connected state](public/screenshots/wallet-connected.png)
+### Evidence Preview
 
-![Balance displayed](public/screenshots/balance-displayed.png)
+![StellarWalletsKit wallet options](public/screenshots/level2-wallet-options.png)
 
-![Successful Testnet transaction](public/screenshots/transaction-success.png)
+![Multi-wallet connected](public/screenshots/level2-wallet-connected.jpeg)
 
-![Transaction result shown to the user](public/screenshots/transaction-result.png)
+![Smart contract overview and read data](public/screenshots/contracts.png)
 
-![Explorer hash verification](public/screenshots/explore.png)
+![Successful frontend contract call](public/screenshots/level2-contract-call.png)
 
-Pending Level 2 submission screenshots:
+![Transaction status](public/screenshots/level2-transaction-status.png)
 
-| Requirement | Target File |
-| --- | --- |
-| Multi-wallet options visible | `public/screenshots/level2-wallet-options.png` |
-| Frontend contract call success | `public/screenshots/level2-contract-call.png` |
-| Live activity feed | `public/screenshots/level2-live-feed.png` |
-| Transaction pending/success/fail states | `public/screenshots/level2-transaction-status.png` |
+![Live activity and contract event synchronization](public/screenshots/level2-live-feed.png)
 
-Capture these screenshots after the frontend wallet `record_payment` flow is completed.
+![Stellar Explorer verification](public/screenshots-yellow-belt1/explore.png)
+
+![Contract Explorer verification](public/screenshots/contract-explore.png)
 
 ## Useful Links
 
 - Repository: https://github.com/Gusma-crypto/lumenpay.git
+- Live demo: https://lumenpay-flame.vercel.app/
+- LumenPayTracker contract: https://stellar.expert/explorer/testnet/contract/CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD
 - Stellar Testnet Horizon: https://horizon-testnet.stellar.org
 - Stellar Expert Testnet: https://stellar.expert/explorer/testnet
 - Stellar Friendbot: https://friendbot.stellar.org
@@ -342,8 +350,8 @@ Stop the existing dev server or run the app on a different port.
 - [x] Deployed `LumenPayTracker` Testnet contract ID
 - [x] Verifiable CLI contract call transaction hash
 - [ ] Frontend wallet `record_payment` transaction hash
-- [ ] Level 2 submission screenshots
-- [ ] Live demo URL, if deployed
+- [x] Level 2 submission screenshots
+- [x] Live demo URL
 
 ## Final Submission Steps
 
@@ -355,5 +363,5 @@ Before submitting Yellow Belt Level 2:
 4. Approve the second wallet signature for `record_payment`.
 5. Copy the frontend `record_payment` transaction hash into the contract evidence table.
 6. Capture the pending Level 2 screenshots listed above.
-7. Add the live demo URL if the frontend is deployed.
+7. Verify that the live demo and contract Explorer links open correctly.
 8. Commit and push the final README and screenshot updates.
