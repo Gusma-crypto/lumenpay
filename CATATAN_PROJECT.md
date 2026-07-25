@@ -936,4 +936,27 @@ Melengkapi bukti submission Yellow Belt Level 2 dengan tautan deployment fronten
 
 - URL contract Stellar Expert adalah halaman contract, bukan hash transaksi individual.
 - Transaction hash frontend `record_payment` masih perlu diambil dari transaksi yang ditandatangani melalui wallet pada aplikasi.
+
+## Langkah 33 — Frontend Contract Transaction Evidence
+
+### Tujuan
+
+Melengkapi bukti pemanggilan smart contract dari frontend untuk submission Yellow Belt Level 2.
+
+### Perubahan
+
+- Menambahkan transaction hash frontend `record_payment` ke tabel Contract Evidence di README.
+- Menambahkan tautan langsung transaksi tersebut ke Stellar Expert Testnet.
+- Menandai requirement frontend contract transaction hash sebagai selesai.
+- Memperbarui final evidence record dan checklist pada `YELLOW_BELT_STEP_BY_STEP.md`.
+
+### Bukti
+
+- Transaction hash: `182b2c71f4df58700e39eacb3e830cd321feafa3412845c2058f79179b1b6a1a`.
+- Explorer: `https://stellar.expert/explorer/testnet/tx/182b2c71f4df58700e39eacb3e830cd321feafa3412845c2058f79179b1b6a1a`.
+
+### Catatan
+
+- Bukti ini diberikan sebagai transaksi contract call yang dijalankan melalui alur frontend wallet.
+- Langkah submission yang tersisa adalah commit, push, dan verifikasi seluruh bukti pada repository publik.
 - `git diff --check` tidak menemukan whitespace error pada file panduan.

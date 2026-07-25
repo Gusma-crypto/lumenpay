@@ -47,7 +47,6 @@ The project is ready for submission when it includes:
 
 ### Remaining Before Final Submission
 
-- [ ] Copy the exact frontend `record_payment` transaction hash into `README.md`.
 - [ ] Commit all current source, documentation, and screenshot changes.
 - [ ] Push the latest commits and screenshots to the public GitHub repository.
 - [ ] Open every README image and Explorer link from GitHub to confirm that none are broken.
@@ -61,10 +60,10 @@ The project is ready for submission when it includes:
 | Deployment transaction | [`7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb`](https://stellar.expert/explorer/testnet/tx/7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb) |
 | Successful CLI `record_payment` validation | [`21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35`](https://stellar.expert/explorer/testnet/tx/21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35) |
 | Latest verified contract record count | `5` |
-| Frontend `record_payment` transaction hash | Pending documentation |
+| Frontend `record_payment` transaction hash | [`182b2c71f4df58700e39eacb3e830cd321feafa3412845c2058f79179b1b6a1a`](https://stellar.expert/explorer/testnet/tx/182b2c71f4df58700e39eacb3e830cd321feafa3412845c2058f79179b1b6a1a) |
 | Live demo | `https://lumenpay-flame.vercel.app` |
 
-The CLI hash proves that the deployed contract accepts `record_payment`. The final README should also contain a separate transaction hash produced by the browser wallet flow.
+The CLI hash proves that the deployed contract accepts `record_payment`. The separate frontend hash documents the browser wallet contract-call flow.
 
 ---
 
@@ -352,7 +351,7 @@ Review `git status` before committing. Never commit `.env.local` or secret keys.
 - [x] Contract events are readable.
 - [x] CLI contract call hash is documented.
 - [x] Contract activity is visible in Stellar Explorer.
-- [ ] Exact frontend contract transaction hash is documented in README.
+- [x] Exact frontend contract transaction hash is documented in README.
 
 ### Real-Time and Status
 
@@ -394,7 +393,7 @@ CLI record_payment transaction:
 21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35
 
 Frontend record_payment transaction:
-PENDING — copy the exact contract transaction hash from Stellar Expert.
+182b2c71f4df58700e39eacb3e830cd321feafa3412845c2058f79179b1b6a1a
 ```
 
 ## Ready-to-Submit Rule

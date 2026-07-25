@@ -223,9 +223,9 @@ Deployment values are intentionally not fabricated.
 | Testnet contract ID | [`CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD`](https://stellar.expert/explorer/testnet/contract/CANCP3MHEGUZMNWXJ7FWPO5OLPZW6JBPBIHH7O4SMDVKYMXLI5EEKAKD) |
 | Deployment transaction | [`7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb`](https://stellar.expert/explorer/testnet/tx/7f008a367ad0f3cc6ca6bf27dbc69adab452a9338e0866a05599ae4089f7d0bb) |
 | Successful CLI `record_payment` validation | [`21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35`](https://stellar.expert/explorer/testnet/tx/21e5d6d77dd9a8d55445717e7222b44944e6095fe01a458dec72d5068cabce35) |
-| Successful frontend `record_payment` | Pending frontend wallet evidence. Replace this with the transaction hash produced after sending a payment from the app and approving the `record_payment` wallet signature. |
+| Successful frontend `record_payment` | [`182b2c71f4df58700e39eacb3e830cd321feafa3412845c2058f79179b1b6a1a`](https://stellar.expert/explorer/testnet/tx/182b2c71f4df58700e39eacb3e830cd321feafa3412845c2058f79179b1b6a1a) |
 
-The CLI validation hash proves the deployed contract can execute `record_payment`. The frontend evidence must use a separate transaction hash from the browser wallet flow, not the deployment hash or the CLI validation hash.
+The CLI validation hash proves that the deployed contract can execute `record_payment`. The separate frontend transaction hash documents the browser wallet contract-call flow.
 
 ## Project Structure
 
@@ -349,7 +349,7 @@ Stop the existing dev server or run the app on a different port.
 - [x] Payment and contract pending/success/fail states
 - [x] Deployed `LumenPayTracker` Testnet contract ID
 - [x] Verifiable CLI contract call transaction hash
-- [ ] Frontend wallet `record_payment` transaction hash
+- [x] Frontend wallet `record_payment` transaction hash
 - [x] Level 2 submission screenshots
 - [x] Live demo URL
 
@@ -359,9 +359,7 @@ Before submitting Yellow Belt Level 2:
 
 1. Run the app locally or open the deployed site.
 2. Connect a Stellar Testnet wallet.
-3. Send a Testnet XLM payment from the app.
-4. Approve the second wallet signature for `record_payment`.
-5. Copy the frontend `record_payment` transaction hash into the contract evidence table.
-6. Capture the pending Level 2 screenshots listed above.
-7. Verify that the live demo and contract Explorer links open correctly.
-8. Commit and push the final README and screenshot updates.
+3. Verify the documented frontend `record_payment` transaction in Stellar Expert.
+4. Verify that every Level 2 screenshot is visible in the GitHub README.
+5. Verify that the live demo and contract Explorer links open correctly.
+6. Commit and push the final README and screenshot updates.
